@@ -4,6 +4,7 @@ import asyncpraw
 from nltk.sentiment import SentimentIntensityAnalyzer
 import nltk
 
+# Download the VADER lexicon once
 nltk.download('vader_lexicon', quiet=True)
 sia = SentimentIntensityAnalyzer()
 
@@ -49,17 +50,20 @@ async def load_and_prepare_reddit_df(url: str, reddit_client=None):
 
     df = pd.DataFrame(flat_comments)
 
-    # Grouping comments into threads based on OC
+    # Grouping comments into threads based on original comment (OC)
     df['oc_bin_id'] = None
     current_bin = None
     for idx, row in df.iterrows():
         if row['level'] == 0:
             current_bin = row['id']
         df.at[idx, 'oc_bin_id'] = current_bin
+
     return df
 
 def add_sentiment_scores(df):
-    df['sentiment'] = df['body'].apply(lambda text: sia.polarity_scores(text)['compound'])
+    df['sentiment'] = df['body'].apply(
+        lambda text: sia.polarity_scores(str(text))['compound']
+    )
     df['sentiment_label'] = df['sentiment'].apply(
         lambda s: 'positive' if s >= 0.05 else 'negative' if s <= -0.05 else 'neutral'
     )
