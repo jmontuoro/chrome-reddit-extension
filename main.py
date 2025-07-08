@@ -29,7 +29,7 @@ def receive_url():
         loop = asyncio.get_event_loop()
         df = loop.run_until_complete(load_and_prepare_reddit_df(url, reddit))
         df = add_sentiment_scores(df)  # ← add this line!
-        result = df[['id', 'body', 'sentiment', 'sentiment_label']].to_dict(orient='records')
+        result = df[['id', 'body', 'sentiment', 'sentiment_label', 'oc_bin_id']].to_dict(orient='records')
         return jsonify({"status": "success", "data": result}), 200
     except Exception as e:
         print("Error:", str(e))
