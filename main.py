@@ -4,6 +4,8 @@ import asyncio
 import asyncpraw
 import os
 import concurrent.futures
+import nest_asyncio
+nest_asyncio.apply()
 
 from reddit_analysis import load_and_prepare_reddit_df, add_sentiment_scores
 
@@ -24,8 +26,8 @@ def receive_url():
     print("Received URL:", url)
 
     try:
-        df = asyncio.run(load_and_prepare_reddit_df(url, reddit))
-        df = add_sentiment_scores(df)
+        loop = asyncio.get_event_loop()
+        df = loop.run_until_complete(load_and_prepare_reddit_df(url, reddit))
         result = df[['id', 'body', 'sentiment', 'sentiment_label']].to_dict(orient='records')
         return jsonify({"status": "success", "data": result}), 200
     except Exception as e:
