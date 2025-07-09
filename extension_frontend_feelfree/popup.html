@@ -1,0 +1,29 @@
+<!-- popup.html -->
+<html>
+<head>
+  <script src="plotly.min.js"></script> <!-- local file, not CDN -->
+  <title>Reddit Sentiment Graph</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      width: 400px;
+      height: 500px;
+      margin: 0;
+      padding: 10px;
+      overflow-y: auto;  /* allow scrolling */
+    }
+    #graph-container,
+    #sunburst-container {
+      height: 400px;  /* adjust as needed */
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h3>Sentiment Graph</h3>
+  <div id="graph-container">Loading sentiment data…</div>
+  <h3>Comment Hierarchy</h3>
+  <div id="sunburst-container">Loading sunburst...</div>
+  <script src="popup.js"></script>
+</body>
+</html>
