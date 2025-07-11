@@ -1,29 +1,74 @@
-<!-- popup.html -->
+<!DOCTYPE html>
 <html>
 <head>
   <script src="plotly.min.js"></script> <!-- local file, not CDN -->
   <title>Reddit Sentiment Graph</title>
   <style>
-    body {
-      font-family: sans-serif;
-      width: 400px;
-      height: 500px;
+    html, body {
+      height: 100%;
+      width: 100%;
+      min-width: 500px;
+      min-height: 600px;
       margin: 0;
       padding: 10px;
-      overflow-y: auto;  /* allow scrolling */
+      font-family: sans-serif;
+      overflow: auto;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
     }
+
+    button#expand-window {
+      margin-bottom: 12px;
+      padding: 6px 12px;
+      font-size: 14px;
+      cursor: pointer;
+      align-self: flex-end;
+    }
+
+    #legend-container,
     #graph-container,
     #sunburst-container {
-      height: 400px;  /* adjust as needed */
-      margin-bottom: 10px;
+      width: 100%;
+    }
+
+    .loading-text {
+      color: gray;
+      font-style: italic;
     }
   </style>
 </head>
 <body>
-  <h3>Sentiment Graph</h3>
-  <div id="graph-container">Loading sentiment data…</div>
+
+  <button id="expand-window">Open in Larger Window</button>
+
+  <h3>Sentiment Scale</h3>
+  <div id="legend-container">
+    <p class="loading-text">Loading legend…</p>
+  </div>
+
+  <h3>Average Sentiment by Comment Bin</h3>
+  <div id="graph-container">
+    <p id="bar-loading" class="loading-text">Loading sentiment data…</p>
+  </div>
+
   <h3>Comment Hierarchy</h3>
-  <div id="sunburst-container">Loading sunburst...</div>
+  <div id="sunburst-container">
+    <p id="sunburst-loading" class="loading-text">Preparing sunburst...</p>
+  </div>
+
   <script src="popup.js"></script>
+  <script>
+    document.getElementById("expand-window").addEventListener("click", () => {
+      chrome.windows.create({
+        url: chrome.runtime.getURL("popup.html"),
+        type: "popup",
+        width: 800,
+        height: 700,
+        top: 150,
+        left: 200
+      });
+    });
+  </script>
 </body>
 </html>

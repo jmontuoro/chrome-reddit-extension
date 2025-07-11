@@ -1,129 +1,212 @@
-// popup.js
-
 const barContainer = document.getElementById("graph-container");
 const sunburstContainer = document.getElementById("sunburst-container");
+const legendContainer = document.getElementById("legend-container");
 
-barContainer.textContent = "Loading sentiment data...";
-sunburstContainer.textContent = "Preparing sunburst...";
+// Render shared sentiment scale bar first
+renderSentimentLegend();
 
-// Step 1: Retrieve Reddit thread URL from chrome storage
+// Entry point: get Reddit URL and trigger visualization
 chrome.storage.local.get("reddit_url", (result) => {
   const url = result.reddit_url;
   if (!url) {
-    barContainer.textContent = "No Reddit thread URL found.";
+    barContainer.textContent = "⚠️ No Reddit thread URL found.";
     return;
   }
 
-  console.log("📦 Using Reddit URL:", url);
+  fetchSentimentData(url)
+    .then(data => {
+      renderBarChart(data);
+      renderSunburstChart(data);
+    })
+    .catch(err => {
+      barContainer.textContent = `Error loading data: ${err.message}`;
+      sunburstContainer.textContent = `Error loading sunburst: ${err.message}`;
+      console.error("Error:", err);
+    });
+});
 
-  // Step 2: Fetch parsed data from backend
-  fetch("https://reddit-extension-backend-541360204677.us-central1.run.app/receive_url", {
+// Draw horizontal sentiment scale
+function renderSentimentLegend() {
+  const gradientTrace = {
+    type: "heatmap",
+    z: [Array.from({ length: 201 }, (_, i) => -1 + i * 0.01)],
+    colorscale: [
+      [0.0, "red"],
+      [0.5, "yellow"],
+      [1.0, "green"]
+    ],
+    showscale: false,  // Hide default colorbar
+    hoverinfo: "none"
+  };
+
+  const annotations = [
+    { x: 0.03, y: -.35, text: "Negative", showarrow: false, xref: "paper", yref: "paper", font: { size: 12 } },
+    { x: 0.5, y: -.35, text: "Neutral", showarrow: false, xref: "paper", yref: "paper", font: { size: 12 } },
+    { x: 0.97, y: -.35, text: "Positive", showarrow: false, xref: "paper", yref: "paper", font: { size: 12 } }
+  ];
+
+  const layout = {
+    xaxis: { visible: false },
+    yaxis: { visible: false },
+    margin: { t: 10, b: 40, l: 20, r: 20 },
+    height: 100,
+    annotations
+  };
+  // Clear previous content and render new legend
+  legendContainer.innerHTML = "";
+  Plotly.newPlot("legend-container", [gradientTrace], layout, {
+    displayModeBar: false
+  });
+}
+
+
+
+// Fetch parsed comment data from backend
+function fetchSentimentData(url) {
+  return fetch("https://reddit-extension-backend-541360204677.us-central1.run.app/receive_url", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ url })
   })
     .then(res => res.json())
     .then(result => {
-      if (result.status !== "success") throw new Error(result.message);
-      const data = result.data;
-
-      // ---------- BAR CHART ----------
-      const summary = {};
-      for (let row of data) {
-        const bin = row.oc_bin_id || "Unbinned";
-        const label = row.sentiment_label;
-        if (!summary[bin]) summary[bin] = { positive: 0, neutral: 0, negative: 0 };
-        summary[bin][label] = (summary[bin][label] || 0) + 1;
+      if (result.status !== "success") {
+        throw new Error(result.message);
       }
-
-      const bins = Object.keys(summary);
-      const sentiments = ["positive", "neutral", "negative"];
-      const barData = sentiments.map(sentiment => ({
-        x: bins,
-        y: bins.map(bin => summary[bin][sentiment] || 0),
-        name: sentiment,
-        type: "bar"
-      }));
-
-      Plotly.newPlot(barContainer, barData, {
-        barmode: "stack",
-        title: "Sentiment Distribution by Bin",
-        xaxis: { title: "Bin ID" },
-        yaxis: { title: "Comment Count" },
-        height: 400
-      });
-
-      // ---------- SUNBURST CHART ----------
-
-      // Title (used in root node too)
-      const root = data.find(row => row.level === 0);
-      const shortTitle = root?.body?.length > 100 ? root.body.slice(0, 97) + "..." : root?.body || "Reddit Thread";
-
-      // Create and prepend synthetic root node
-      const syntheticRoot = {
-        id: "ROOT",
-        label: "Reddit Thread",
-        parent: "",
-        author: "OP",
-        score: 1,
-        body: shortTitle,
-        sentiment: 0,
-        sentiment_label: "neutral"
-      };
-
-      data.unshift(syntheticRoot);
-
-      // Recompute ids AFTER prepending
-      const ids = new Set(data.map(row => row.id));
-
-      // Fix invalid or missing data
-      data.forEach(row => {
-        // Ensure ID and label
-        if (!row.id) row.id = crypto.randomUUID();
-        row.label = row.id;
-
-        // Ensure valid numeric score ≥ 1
-        const parsedScore = Number(row.score);
-        row.score = isNaN(parsedScore) ? 1 : Math.max(1, parsedScore);
-
-        // Clean parent ID
-        const rawParent = row.parent_id ? row.parent_id.replace(/^t[13]_/, "") : (row.parent || "");
-        row.parent = ids.has(rawParent) ? rawParent : "ROOT";
-      });
-
-
-      // Plot sunburst
-      Plotly.newPlot(sunburstContainer, [{
-        type: "sunburst",
-        ids: data.map(r => r.label),
-        labels: data.map(r => r.author),
-        parents: data.map(r => r.parent),
-        values: data.map(r => r.score),
-        hovertext: data.map(r =>
-          `${r.author}<br><b>${r.sentiment_label}</b><br>${r.body?.slice(0, 100) || ""}...`
-        ),
-        hoverinfo: "text",
-        marker: {
-          colors: data.map(r => r.sentiment),
-          colorscale: "RdYlGn",
-          colorbar: { title: "Sentiment" }
-        }
-      }], {
-        title: {
-          text: shortTitle,
-          x: 0.5,
-          xanchor: "center",
-          font: { size: 14 }
-        },
-        margin: { t: 40, l: 5, r: 5, b: 5 },
-        uniformtext: { minsize: 10, mode: "hide" },
-        height: 500
-      });
-
-    })
-    .catch(err => {
-      barContainer.textContent = "Error: " + err.message;
-      sunburstContainer.textContent = "";
-      console.error(err);
+      return result.data;
     });
+}
+
+// Build and render bar chart from sentiment summary
+function renderBarChart(data) {
+  const summary = {};
+
+  for (let row of data) {
+    const bin = row.oc_bin_id || "Unbinned";
+
+    if (!summary[bin]) {
+      summary[bin] = {
+        count: 0,
+        totalSentiment: 0,
+        oc_author: row.oc_author || row.author || "anonymous",
+        body: row.body,
+        score: row.score || 0,
+        is_op: false
+      };
+    }
+
+    summary[bin].count += 1;
+    summary[bin].totalSentiment += row.sentiment || 0;
+
+    if (row.parent_id === "") {
+      summary[bin].is_op = true;
+    }
+  }
+
+  const bins = Object.keys(summary);
+
+  const barData = [{
+    type: "bar",
+    x: bins.map(bin => {
+      const author = summary[bin].oc_author;
+      return summary[bin].is_op ? `${author} (OP)` : author;
+    }),
+    y: bins.map(bin => summary[bin].count),
+    hovertext: bins.map(bin => {
+      const row = summary[bin];
+      return `
+        <b>author</b>: ${row.oc_author}<br>
+        <b>score</b>: ${row.score}<br>
+        <b>body</b>: ${row.body.slice(0, 100)}...<br>
+        <b>avg_sentiment</b>: ${(row.totalSentiment / row.count).toFixed(4)}
+      `;
+    }),
+    hoverinfo: "skip",
+    hovertemplate: "%{hovertext}<extra></extra>",
+    marker: {
+      color: bins.map(bin => summary[bin].totalSentiment / summary[bin].count),
+      colorscale: [
+        [0.0, "red"],
+        [0.5, "yellow"],
+        [1.0, "green"]
+      ],
+      cmin: -1,
+      cmax: 1,
+      showscale: false
+    }
+  }];
+
+  barContainer.innerHTML = "";
+  Plotly.newPlot(barContainer, barData, {
+    height: 400,
+    xaxis: { tickangle: -45 },
+    margin: { t: 40, b: 80 }
+  });
+}
+
+
+
+
+
+// Build and render sunburst chart with hierarchical sentiment
+function renderSunburstChart(data) {
+  normalizeParentIds(data);
+  const filtered = filterValidHierarchy(data);
+
+  const sunburstData = {
+    type: "sunburst",
+    ids: filtered.map(r => r.id),
+    labels: filtered.map(r => r.author || "anonymous"),
+    parents: filtered.map(r => r.parent),
+    values: filtered.map(r => Math.max(r.score || 1, 1)),
+    hovertext: filtered.map(r => `
+      <b>author</b>: ${r.author || "anonymous"}<br>
+      <b>score</b>: ${r.score}<br>
+      <b>body</b>: ${r.body.slice(0, 100)}...<br>
+      <b>sentiment_label</b>: ${r.sentiment_label}<br>
+      <b>sentiment_compound</b>: ${r.sentiment.toFixed(4)}
+    `),
+    hoverinfo: "text",
+    marker: {
+      colors: filtered.map(r => r.sentiment),
+      colorscale: [
+        [0.0, "red"],
+        [0.5, "yellow"],
+        [1.0, "green"]
+      ],
+      cmin: -1,
+      cmax: 1,
+      showscale: false
+    }
+  };
+
+  sunburstContainer.innerHTML = "";
+  Plotly.newPlot(sunburstContainer, [sunburstData], {
+    margin: { t: 0, l: 0, r: 0, b: 0 },
+    autosize: true
+  }, {
+    responsive: true
+  });
+}
+
+function normalizeParentIds(data) {
+  data.forEach(row => {
+    row.parent = row.parent_id?.replace(/^t[13]_/, "") || "";
+  });
+}
+
+function filterValidHierarchy(data) {
+  const validIds = new Set(data.map(r => r.id));
+  return data.filter(r => r.parent === "" || validIds.has(r.parent));
+}
+
+document.getElementById("expand-window").addEventListener("click", () => {
+  chrome.windows.create({
+    url: chrome.runtime.getURL("popup.html"),
+    type: "popup",
+    width: 800,
+    height: 700,
+    top: 150,
+    left: 200
+  });
 });
