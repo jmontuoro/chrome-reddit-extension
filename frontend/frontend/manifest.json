@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Reddit Sentiment Demo",
+  "version": "1.0",
+  "permissions": ["scripting", "activeTab", "storage"],
+  "host_permissions": ["https://www.reddit.com/*"],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.reddit.com/*"],
+      "js": ["content.js"]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["popup.html", "plotly.min.js"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
