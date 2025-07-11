@@ -57,6 +57,8 @@ async def load_and_prepare_reddit_df(url: str, reddit_client=None):
         if row['level'] == 0:
             current_bin = row['id']
         df.at[idx, 'oc_bin_id'] = current_bin
+    print(df.columns)
+    print(df.head(1).to_dict(orient="records"))
 
     return df
 
