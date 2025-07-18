@@ -70,35 +70,3 @@ def add_sentiment_scores(df):
         lambda s: 'positive' if s >= 0.05 else 'negative' if s <= -0.05 else 'neutral'
     )
     return df
-
-def add_bias_scores(df):
-    """
-    Uses a HateBERT-based model to assign a social bias label to each Reddit comment.
-
-    This function is intended to be implemented by Maria using a pretrained or fine-tuned 
-    transformer model (such as HateBERT) to identify types of bias present in comment text.
-    It operates similarly to `add_sentiment_scores`, appending a new `bias_label` column to 
-    the input DataFrame.
-
-    The labels should reflect **categories of social bias**, such as:
-    - "racial", "gender", "religious", "none", or other custom classes defined by the model.
-
-    Parameters:
-    df (pd.DataFrame): DataFrame containing Reddit submission and comment data.
-                       Must include a `body` column with raw text.
-
-    Implementation Notes:
-    - Output labels should be inserted as a new column: `bias_label`.
-
-    Example template:
-    >>> from transformers import pipeline
-    >>> classifier = pipeline("text-classification", model="your-model-name", device=0)
-    >>> def add_bias_scores(df):
-    >>>     df['bias_label'] = df['body'].apply(lambda text: classifier(text)[0]['label'])
-    >>>     return df
-
-    Returns:
-    pd.DataFrame: The same DataFrame with an additional `bias_label` column.
-    """
-    df['bias_label'] = df['body'].apply('YOUR CLASSIFIER HERE')
-    return None

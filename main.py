@@ -7,7 +7,7 @@ import concurrent.futures
 import nest_asyncio
 nest_asyncio.apply()
 
-from reddit_analysis import load_and_prepare_reddit_df, add_sentiment_scores, add_bias_scores
+from reddit_analysis import load_and_prepare_reddit_df, add_sentiment_scores
 
 app = Flask(__name__)
 CORS(app)
@@ -28,18 +28,9 @@ def receive_url():
     try:
         loop = asyncio.get_event_loop()
         df = loop.run_until_complete(load_and_prepare_reddit_df(url, reddit))
-        df = add_sentiment_scores(df)
-        df = add_bias_scores(df)
-        
+        df = add_sentiment_scores(df)  # ← add this line!
         result = df.to_dict(orient='records')
-        
-        return jsonify({
-            "status": "success",
-            "data": {
-                "sentiment_data": result,
-                "bias_data": result  # frontend will pull either label
-            }
-        }), 200
+        return jsonify({"status": "success", "data": result}), 200
     except Exception as e:
         print("Error:", str(e))
         return jsonify({"status": "error", "message": str(e)}), 500
