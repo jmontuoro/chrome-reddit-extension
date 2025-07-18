@@ -9,7 +9,7 @@ renderSentimentLegend();
 chrome.storage.local.get("reddit_url", (result) => {
   const url = result.reddit_url;
   if (!url) {
-    barContainer.textContent = "⚠️ No Reddit thread URL found.";
+    barContainer.textContent = "⚠ No Reddit thread URL found.";
     return;
   }
 
