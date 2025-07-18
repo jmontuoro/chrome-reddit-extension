@@ -9,7 +9,7 @@ renderSentimentLegend();
 chrome.storage.local.get("reddit_url", (result) => {
   const url = result.reddit_url;
   if (!url) {
-    barContainer.textContent = "⚠ No Reddit thread URL found.";
+    barContainer.textContent = "⚠️ No Reddit thread URL found.";
     return;
   }
 
@@ -17,7 +17,6 @@ chrome.storage.local.get("reddit_url", (result) => {
     .then(data => {
       renderBarChart(data);
       renderSunburstChart(data);
-      renderBiasChart(data);
     })
     .catch(err => {
       barContainer.textContent = `Error loading data: ${err.message}`;
@@ -188,56 +187,6 @@ function renderSunburstChart(data) {
   }, {
     responsive: true
   });
-}
-
-//Build and render bar chart with bias data
-function renderBiasChart(data) {
-  const biasContainer = document.getElementById("bias-graph-container");
-  if (data.every(row => !row.bias_label)) {
-    biasContainer.innerHTML = "⚠ No bias labels found in data.";
-    return;
-  }
-  if (!biasContainer) {
-    console.warn("Missing #bias-graph-container");
-    return;
-  }
-
-  // Aggregate bias counts
-  const labelCounts = {};
-  for (let row of data) {
-    const label = row.bias_label || "unclassified";
-    labelCounts[label] = (labelCounts[label] || 0) + 1;
-  }
-
-  const labels = Object.keys(labelCounts);
-  const counts = Object.values(labelCounts);
-
-  const trace = {
-    type: "bar",
-    x: counts,
-    y: labels,
-    orientation: "h",
-    marker: {
-      color: "orange"
-    },
-    hovertemplate: "<b>%{y}</b>: %{x} comments<extra></extra>"
-  };
-
-  const layout = {
-    title: "Bias Category Breakdown",
-    margin: { t: 40, l: 80, r: 20, b: 40 },
-    height: 300 + labels.length * 20,
-    yaxis: {
-      automargin: true,
-      categoryorder: "total ascending"
-    },
-    xaxis: {
-      title: "Number of Comments"
-    }
-  };
-
-  biasContainer.innerHTML = "";
-  Plotly.newPlot(biasContainer, [trace], layout);
 }
 
 function normalizeParentIds(data) {
