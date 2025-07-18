@@ -7,7 +7,7 @@ import concurrent.futures
 import nest_asyncio
 nest_asyncio.apply()
 
-from reddit_analysis import load_and_prepare_reddit_df, add_sentiment_scores
+from reddit_analysis import load_and_prepare_reddit_df, add_sentiment_scores, add_bias_scores
 
 app = Flask(__name__)
 CORS(app)
