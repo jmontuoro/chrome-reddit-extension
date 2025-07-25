@@ -1,36 +1,49 @@
 console.log("Reddit Extension Loaded");
 
-const isThreadPage = /\/comments\/[a-z0-9]+/i.test(window.location.pathname);
+let lastUrl = location.href;
 
-if (isThreadPage) {
-  const postUrl = window.location.href;
-  console.log("Thread URL:", postUrl);
+function handleUrlUpdate(url) {
+  const isThreadPage = /\/comments\/[a-z0-9]+/i.test(new URL(url).pathname);
 
-  // Store URL so popup.js can access it
-  chrome.storage.local.set({ reddit_url: postUrl }, () => {
-    console.log("Stored reddit_url via chrome.storage.local");
-  });
+  if (isThreadPage) {
+    console.log("Thread detected:", url);
 
-  const postIdMatch = postUrl.match(/comments\/([^\/]+)/);
-  const postId = postIdMatch ? postIdMatch[1] : null;
-  console.log("Post ID:", postId);
+    chrome.storage.local.set({ reddit_url: url }, () => {
+      console.log("Stored reddit_url");
+    });
 
-  // Send URL to backend
-  fetch("https://reddit-extension-backend-541360204677.us-central1.run.app/receive_url", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ url: postUrl })
-  })
-  .then(response => response.json())
-  .then(data => {
-    console.log("Backend responded:", data);
-    // Optional: you could trigger something here
-  })
-  .catch(error => {
-    console.error("Error contacting backend:", error);
-  });
-} else {
-  console.log("Not a thread page.");
+    const postId = url.match(/comments\/([^\/]+)/)?.[1] || null;
+    console.log("Post ID:", postId);
+
+    fetch("https://reddit-extension-backend-541360204677.us-central1.run.app/receive_url", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url })
+    })
+      .then(res => res.json())
+      .then(data => {
+        console.log("Backend responded:", data);
+      })
+      .catch(err => {
+        console.error("Backend error:", err);
+      });
+  } else {
+    console.log("ℹNot a thread page:", url);
+    chrome.storage.local.remove("reddit_url", () => {
+      console.log("Cleared reddit_url from storage");
+    });
+  }
 }
+
+// Run once on initial load
+handleUrlUpdate(location.href);
+
+// Also re-check periodically (Reddit SPA navigation)
+setInterval(() => {
+  const currentUrl = location.href;
+  if (currentUrl !== lastUrl) {
+    lastUrl = currentUrl;
+    console.log("URL changed:", currentUrl);
+    handleUrlUpdate(currentUrl);
+  }
+}, 1000);

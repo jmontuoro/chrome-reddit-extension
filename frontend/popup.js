@@ -8,11 +8,37 @@ const legendContainer = document.getElementById("legend-container");
 // Entry point: get Reddit URL and trigger visualization
 chrome.storage.local.get("reddit_url", (result) => {
   const url = result.reddit_url;
-  if (!url) {
-    barContainer.textContent = "No Reddit thread URL found.";
+
+  let isThreadPage = false;
+
+  try {
+    const parsed = new URL(url);
+    isThreadPage = /\/comments\/[a-z0-9]+/i.test(parsed.pathname);
+  } catch (e) {
+    console.warn("Invalid URL in storage:", url);
+  }
+
+  if (!url || !isThreadPage) {
+    // Clear all containers
+    barContainer.innerHTML = "";
+    sunburstContainer.innerHTML = "";
+    legendContainer.innerHTML = "";
+
+    // Show message
+    barContainer.innerHTML = `
+      <div style="text-align: center; padding: 1em;">
+        <img src="images/comment-icon.png" alt="comment icon" style="width: 80px; opacity: 1; margin-bottom: 10px;" />
+        <p style="font-size: 14px; color: gray; line-height: 1.4;">
+          This is not a Reddit thread page.<br>
+          Navigate to a post and click its <strong>comments</strong> button,<br>
+          then reopen the extension.
+        </p>
+      </div>
+    `;
     return;
   }
 
+  // If thread is valid, fetch and render
   fetchSentimentData(url)
     .then(data => {
       renderSentimentLegend(data);
@@ -25,6 +51,8 @@ chrome.storage.local.get("reddit_url", (result) => {
       console.error("Error:", err);
     });
 });
+
+
 
 // Draw horizontal sentiment scale
 // future idea: plot relevant sentiment scores on the sentiment scale: pink vertical line for total post sentiment, cyan line for the head thread's sentiment 
