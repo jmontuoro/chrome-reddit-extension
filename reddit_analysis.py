@@ -3,7 +3,6 @@ import asyncio
 import asyncpraw
 from nltk.sentiment import SentimentIntensityAnalyzer
 import nltk
-import random
 
 # Download the VADER lexicon once
 nltk.download('vader_lexicon', quiet=True)
@@ -48,13 +47,8 @@ async def load_and_prepare_reddit_df(url: str, reddit_client=None, max_comments=
     # Step 1: Flatten all comments into a list of dicts
     flat_comments = flatten_comments(submission.comments)
 
-    # Step 2: Score-aware subsampling if too large
-    if len(flat_comments) > max_comments:
-        flat_comments = random.choices(
-            flat_comments,
-            weights=[max(1, comment['score']) for comment in flat_comments],
-            k=max_comments
-        )
+    # Step 2: Heuristically take first N comments (already sorted by "best")
+    flat_comments = flat_comments[:max_comments]
 
     # Step 3: Add the original post at the top
     original_post_info = extract_submission_metadata(submission)
