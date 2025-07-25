@@ -35,7 +35,7 @@ def extract_submission_metadata(submission, level=0):
         "level": level,
     }
 
-async def load_and_prepare_reddit_df(url: str, reddit_client=None):
+async def load_and_prepare_reddit_df(url: str, reddit_client=None, max_comments=1000):
     if reddit_client is None:
         raise ValueError("Reddit client must be provided.")
 
@@ -44,21 +44,31 @@ async def load_and_prepare_reddit_df(url: str, reddit_client=None):
     submission.comment_sort = "best"
     await submission.comments.replace_more(limit=None)
 
+    # Step 1: Flatten all comments into a list of dicts
     flat_comments = flatten_comments(submission.comments)
+
+    # Step 2: Score-aware subsampling if too large
+    if len(flat_comments) > max_comments:
+        flat_comments = random.choices(
+            flat_comments,
+            weights=[max(1, comment['score']) for comment in flat_comments],
+            k=max_comments
+        )
+
+    # Step 3: Add the original post at the top
     original_post_info = extract_submission_metadata(submission)
     flat_comments.insert(0, original_post_info)
 
+    # Step 4: Convert to DataFrame
     df = pd.DataFrame(flat_comments)
 
-    # Grouping comments into threads based on original comment (OC)
+    # Step 5: Grouping comments into threads based on original comment (OC)
     df['oc_bin_id'] = None
     current_bin = None
     for idx, row in df.iterrows():
         if row['level'] == 0:
             current_bin = row['id']
         df.at[idx, 'oc_bin_id'] = current_bin
-    print(df.columns)
-    print(df.head(1).to_dict(orient="records"))
 
     return df
 
