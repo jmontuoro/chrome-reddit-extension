@@ -3,6 +3,7 @@ import asyncio
 import asyncpraw
 from nltk.sentiment import SentimentIntensityAnalyzer
 import nltk
+import random
 
 # Download the VADER lexicon once
 nltk.download('vader_lexicon', quiet=True)
