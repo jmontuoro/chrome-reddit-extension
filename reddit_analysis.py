@@ -42,7 +42,7 @@ async def load_and_prepare_reddit_df(url: str, reddit_client=None, max_comments=
     submission = await reddit_client.submission(url=url)
     await submission.load()
     submission.comment_sort = "best"
-    await submission.comments.replace_more(limit=None)
+    await submission.comments.replace_more(limit=8) #reduces depth- helpful for large threads.
 
     # Step 1: Flatten all comments into a list of dicts
     flat_comments = flatten_comments(submission.comments)
