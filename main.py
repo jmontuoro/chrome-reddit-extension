@@ -12,8 +12,6 @@ from reddit_analysis import load_and_prepare_reddit_df, add_sentiment_scores
 app = Flask(__name__)
 CORS(app)
 
-#adding this useless comment to test GCP synchronization
-
 # Set up Reddit client from environment variables
 reddit = asyncpraw.Reddit(
     client_id=os.getenv("REDDIT_CLIENT_ID"),
