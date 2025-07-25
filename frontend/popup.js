@@ -3,18 +3,19 @@ const sunburstContainer = document.getElementById("sunburst-container");
 const legendContainer = document.getElementById("legend-container");
 
 // Render shared sentiment scale bar first
-renderSentimentLegend();
+//renderSentimentLegend();
 
 // Entry point: get Reddit URL and trigger visualization
 chrome.storage.local.get("reddit_url", (result) => {
   const url = result.reddit_url;
   if (!url) {
-    barContainer.textContent = "⚠️ No Reddit thread URL found.";
+    barContainer.textContent = "No Reddit thread URL found.";
     return;
   }
 
   fetchSentimentData(url)
     .then(data => {
+      renderSentimentLegend(data);
       renderBarChart(data);
       renderSunburstChart(data);
     })
@@ -26,7 +27,8 @@ chrome.storage.local.get("reddit_url", (result) => {
 });
 
 // Draw horizontal sentiment scale
-function renderSentimentLegend() {
+// future idea: plot relevant sentiment scores on the sentiment scale: pink vertical line for total post sentiment, cyan line for the head thread's sentiment 
+function renderSentimentLegend(data) {
   const gradientTrace = {
     type: "heatmap",
     z: [Array.from({ length: 201 }, (_, i) => -1 + i * 0.01)],
@@ -52,14 +54,15 @@ function renderSentimentLegend() {
     height: 100,
     annotations
   };
+
+  renderInsights(layout, data); //expand here
   // Clear previous content and render new legend
   legendContainer.innerHTML = "";
   Plotly.newPlot("legend-container", [gradientTrace], layout, {
-    displayModeBar: false
+    displayModeBar: false,
+    staticPlot: true //disables dragging, zooming
   });
 }
-
-
 
 // Fetch parsed comment data from backend
 function fetchSentimentData(url) {
@@ -76,6 +79,62 @@ function fetchSentimentData(url) {
       return result.data;
     });
 }
+
+function renderInsights(layout, data) {
+  if (!data || data.length === 0) return;
+
+  const sentiments = data.map(d => d.sentiment || 0);
+  const avgSentiment = sentiments.reduce((a, b) => a + b, 0) / sentiments.length;
+
+  const opComment = data.find(d => d.parent_id === "");
+  const opSentiment = opComment ? opComment.sentiment || 0 : 0;
+
+  const xAvg = (avgSentiment + 1) / 2;
+  const xOp = (opSentiment + 1) / 2;
+
+  layout.shapes = [
+    {
+      type: "line",
+      x0: xAvg, x1: xAvg,
+      y0: 0, y1: 1,
+      xref: "paper", yref: "paper",
+      line: { color: "pink", width: 2 }
+    },
+    {
+      type: "line",
+      x0: xOp, x1: xOp,
+      y0: 0, y1: 1,
+      xref: "paper", yref: "paper",
+      line: { color: "cyan", width: 2 }
+    }
+  ];
+
+  layout.annotations.push(
+    {
+      x: xAvg - 0.015,
+      y: 1.05,
+      text: `Avg Sent.`,
+      showarrow: false,
+      xref: "paper",
+      yref: "paper",
+      textangle: -90,
+      font: { size: 11, color: "pink" }
+    },
+    {
+      x: xOp + 0.015,
+      y: 1.05,
+      text: `OP Sent.`,
+      showarrow: false,
+      xref: "paper",
+      yref: "paper",
+      textangle: -90,
+      font: { size: 11, color: "cyan" }
+    }
+  );
+}
+
+
+
 
 // Build and render bar chart from sentiment summary
 function renderBarChart(data) {
