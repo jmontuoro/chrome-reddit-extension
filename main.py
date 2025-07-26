@@ -9,7 +9,7 @@ from flask_cors import CORS
 import asyncio
 import asyncpraw
 import os
-import concurrent.futures
+#import concurrent.futures
 #import nest_asyncio
 
 from reddit_analysis import load_and_prepare_reddit_df, add_sentiment_scores
@@ -35,11 +35,17 @@ def receive_url():
     data = request.get_json()
     url = data.get('url')
 
+    async def process_reddit(url):
+        df = await load_and_prepare_reddit_df(url, reddit)
+        return add_sentiment_scores(df)
+
     try:
-        df = asyncio.run(load_and_prepare_reddit_df(url, reddit))
+        df = asyncio.run(process_reddit(url))
         result = df.to_dict(orient='records')
         return jsonify({"status": "success", "data": result}), 200
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
