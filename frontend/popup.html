@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <script src="plotly.min.js"></script> <!-- local file, not CDN -->
+  <script src="plotly.min.js"></script>
   <title>Reddit Sentiment Graph</title>
   <style>
     html, body {
       height: 100%;
       width: 100%;
-      min-width: 500px;
-      min-height: 600px;
+      min-width: 250px;
+      min-height: 450px;
       margin: 0;
       padding: 10px;
       font-family: sans-serif;
@@ -26,15 +26,19 @@
       align-self: flex-end;
     }
 
+    .loading-text {
+      color: gray;
+      font-style: italic;
+    }
+
     #legend-container,
     #graph-container,
     #sunburst-container {
       width: 100%;
     }
 
-    .loading-text {
-      color: gray;
-      font-style: italic;
+    .advanced-visuals {
+      display: block;
     }
   </style>
 </head>
@@ -42,33 +46,26 @@
 
   <button id="expand-window">Open in Larger Window</button>
 
-  <h3>Sentiment Scale</h3>
-  <div id="legend-container">
-    <p class="loading-text">Loading legend…</p>
+  <!-- Add a wrapper with ID for toggling -->
+  <div id="legend-header">
+    <h3>Sentiment Scale</h3>
+    <p id="legend-status" class="loading-text">Loading legend...</p>
   </div>
+  <div id="legend-container"></div>
 
-  <h3>Average Sentiment by Comment Bin</h3>
-  <div id="graph-container">
-    <p id="bar-loading" class="loading-text">Loading sentiment data…</p>
-  </div>
+  <!-- Charts only shown in the popup window -->
+  <div class="advanced-visuals">
+    <h3>Average Sentiment by Comment Bin</h3>
+    <div id="graph-container">
+      <p id="bar-loading" class="loading-text">Loading sentiment data...</p>
+    </div>
 
-  <h3>Comment Hierarchy</h3>
-  <div id="sunburst-container">
-    <p id="sunburst-loading" class="loading-text">Preparing sunburst...</p>
+    <h3>Comment Hierarchy</h3>
+    <div id="sunburst-container">
+      <p id="sunburst-loading" class="loading-text">Preparing sunburst...</p>
+    </div>
   </div>
 
   <script src="popup.js"></script>
-  <script>
-    document.getElementById("expand-window").addEventListener("click", () => {
-      chrome.windows.create({
-        url: chrome.runtime.getURL("popup.html"),
-        type: "popup",
-        width: 800,
-        height: 700,
-        top: 150,
-        left: 200
-      });
-    });
-  </script>
 </body>
 </html>

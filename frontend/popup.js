@@ -1,13 +1,36 @@
-// DOM containers for rendering
+// DOM containers
 const barContainer = document.getElementById("graph-container");
 const sunburstContainer = document.getElementById("sunburst-container");
 const legendContainer = document.getElementById("legend-container");
+const toggleButton = document.getElementById("expand-window");
+const advancedVisuals = document.querySelector(".advanced-visuals");
 
-/**
- * Main entry point: retrieves stored Reddit thread URL,
- * validates it's a Reddit post page, and triggers data fetching
- * and rendering of sentiment visualizations.
- */
+// Check if this is the popup window (opened via `chrome.windows.create(...)`)
+const isInPopupWindow = window.outerWidth >= 800 && window.outerHeight >= 600;
+
+// Hide or show advanced visuals and toggle button accordingly
+if (isInPopupWindow) {
+  toggleButton.style.display = "none"; // Hide the "Open in Larger Window" button
+  advancedVisuals.style.display = "block";
+  legendContainer.style.display = 'none'; // hide sentiment legend in window
+  document.getElementById("legend-header").style.display = 'none'; //Hide heading + loading
+
+} else {
+  advancedVisuals.style.display = "none";
+  toggleButton.addEventListener("click", () => {
+    chrome.windows.create({
+      url: chrome.runtime.getURL("popup.html"),
+      type: "popup",
+      width: 800,
+      height: 700,
+      top: 150,
+      left: 200
+    });
+  });
+}
+
+
+// Load and render Reddit sentiment data
 chrome.storage.local.get("reddit_url", (result) => {
   const url = result.reddit_url;
 
@@ -21,13 +44,9 @@ chrome.storage.local.get("reddit_url", (result) => {
   }
 
   if (!url || !isThreadPage) {
-    // Clear all containers
     barContainer.innerHTML = "";
     sunburstContainer.innerHTML = "";
-    legendContainer.innerHTML = "";
-
-    // Display fallback instructions
-    barContainer.innerHTML = `
+    legendContainer.innerHTML = `
       <div style="text-align: center; padding: 1em;">
         <img src="images/comment-icon.png" alt="comment icon" style="width: 80px; opacity: 1; margin-bottom: 10px;" />
         <p style="font-size: 14px; color: gray; line-height: 1.4;">
@@ -40,12 +59,15 @@ chrome.storage.local.get("reddit_url", (result) => {
     return;
   }
 
-  // If Reddit thread is valid, fetch and render
   fetchSentimentData(url)
     .then(data => {
-      renderSentimentLegend(data);
-      renderBarChart(data);
-      renderSunburstChart(data);
+      if (!isInPopupWindow) {
+        renderSentimentLegend(data);
+      }
+      if (isInPopupWindow) {
+        renderBarChart(data);
+        renderSunburstChart(data);
+      }
     })
     .catch(err => {
       barContainer.textContent = `Error loading data: ${err.message}`;
@@ -53,8 +75,6 @@ chrome.storage.local.get("reddit_url", (result) => {
       console.error("Error:", err);
     });
 });
-
-
 
 /**
  * Renders the horizontal sentiment scale using a heatmap gradient.
@@ -65,38 +85,38 @@ chrome.storage.local.get("reddit_url", (result) => {
 function renderSentimentLegend(data) {
   const gradientTrace = {
     type: "heatmap",
-    z: [Array.from({ length: 201 }, (_, i) => -1 + i * 0.01)],
+    z: Array.from({ length: 201 }, (_, i) => [-1 + i * 0.01]), // vertical orientation
+    x: [0],  // dummy single column
+    y: Array.from({ length: 201 }, (_, i) => -1 + i * 0.01),
     colorscale: [
       [0.0, "red"],
       [0.5, "yellow"],
       [1.0, "green"]
     ],
-    showscale: false,  // Hide default colorbar
+    showscale: false,
     hoverinfo: "none"
   };
-
-  const annotations = [
-    { x: 0.03, y: -.35, text: "Negative", showarrow: false, xref: "paper", yref: "paper", font: { size: 12 } },
-    { x: 0.5, y: -.35, text: "Neutral", showarrow: false, xref: "paper", yref: "paper", font: { size: 12 } },
-    { x: 0.97, y: -.35, text: "Positive", showarrow: false, xref: "paper", yref: "paper", font: { size: 12 } }
-  ];
 
   const layout = {
     xaxis: { visible: false },
     yaxis: { visible: false },
-    margin: { t: 10, b: 40, l: 20, r: 20 },
-    height: 100,
-    annotations
+    margin: { t: 30, b: 30, l: 30, r: 30 },
+    height: 300,
+    width: 100,
+    annotations: [
+      { x: 0, y: -1.06, text: "Negative", showarrow: false, xref: "x", yref: "y", font: { size: 12 } },
+      { x: 0, y: 1.07, text: "Positive", showarrow: false, xref: "x", yref: "y", font: { size: 12 } }
+    ]
   };
 
-  renderInsights(layout, data); //Adds key insights (e.g. avg sentiment markers)
-  // Clear previous content and render new legend
-  legendContainer.innerHTML = "";
+  renderInsights(layout, data); // this will still work fine
+  document.getElementById("legend-status").textContent = ""; // clear it before rendering
   Plotly.newPlot("legend-container", [gradientTrace], layout, {
     displayModeBar: false,
-    staticPlot: true //disables dragging, zooming
+    staticPlot: true
   });
 }
+
 
 /**
  * Sends a POST request to the backend with the Reddit thread URL,
@@ -136,21 +156,23 @@ function renderInsights(layout, data) {
   const opComment = data.find(d => d.parent_id === "");
   const opSentiment = opComment ? opComment.sentiment || 0 : 0;
 
-  const xAvg = (avgSentiment + 1) / 2;
-  const xOp = (opSentiment + 1) / 2;
+  const yAvg = (avgSentiment + 1) / 2; // scale to [0,1] for y-axis
+  const yOp = (opSentiment + 1) / 2;
+
+  const xPosition = .5; // slightly outside the bar, right side
 
   layout.shapes = [
     {
       type: "line",
-      x0: xAvg, x1: xAvg,
-      y0: 0, y1: 1,
+      x0: 0, x1: .58,
+      y0: yAvg, y1: yAvg,
       xref: "paper", yref: "paper",
       line: { color: "pink", width: 2 }
     },
     {
       type: "line",
-      x0: xOp, x1: xOp,
-      y0: 0, y1: 1,
+      x0: 0, x1: .58,
+      y0: yOp, y1: yOp,
       xref: "paper", yref: "paper",
       line: { color: "cyan", width: 2 }
     }
@@ -158,27 +180,28 @@ function renderInsights(layout, data) {
 
   layout.annotations.push(
     {
-      x: xAvg - 0.015,
-      y: 1.05,
-      text: `Avg Sent.`,
+      x: xPosition,
+      y: yAvg,
+      text: `Avg`,
       showarrow: false,
       xref: "paper",
       yref: "paper",
-      textangle: -90,
-      font: { size: 11, color: "pink" }
+      font: { size: 11, color: "pink" },
+      xanchor: "left"
     },
     {
-      x: xOp + 0.015,
-      y: 1.05,
-      text: `OP Sent.`,
+      x: xPosition,
+      y: yOp,
+      text: `OP`,
       showarrow: false,
       xref: "paper",
       yref: "paper",
-      textangle: -90,
-      font: { size: 11, color: "cyan" }
+      font: { size: 11, color: "cyan" },
+      xanchor: "left"
     }
   );
 }
+
 
 
 
@@ -332,13 +355,4 @@ function filterValidHierarchy(data) {
   return data.filter(r => r.parent === "" || validIds.has(r.parent));
 }
 
-document.getElementById("expand-window").addEventListener("click", () => {
-  chrome.windows.create({
-    url: chrome.runtime.getURL("popup.html"),
-    type: "popup",
-    width: 800,
-    height: 700,
-    top: 150,
-    left: 200
-  });
-});
+
