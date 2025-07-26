@@ -1,3 +1,10 @@
+#Generative AI Disclaimer
+'''This file contains portions of code and documentation assisted by generative AI (ChatGPT, Copilot),
+particularly for converting Python functions and refining docstrings.
+Notably, assistance was used in structuring sentiment logic.
+All functionality was implemented, reviewed, and adapted by Jackson Montuoro.'''
+
+
 import pandas as pd
 import asyncio
 import asyncpraw
