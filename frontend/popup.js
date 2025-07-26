@@ -1,3 +1,8 @@
+// Portions of this file were assisted by generative AI (ChatGPT),
+// especially in adapting Python logic for use in frontend visualizations.
+// All logic was reviewed, modified, and integrated by Jackson Montuoro.
+
+
 // DOM containers for rendering
 const barContainer = document.getElementById("graph-container");
 const sunburstContainer = document.getElementById("sunburst-container");
