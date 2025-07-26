@@ -4,12 +4,12 @@ import asyncio
 import asyncpraw
 import os
 import concurrent.futures
-import nest_asyncio
+#import nest_asyncio
 
 from reddit_analysis import load_and_prepare_reddit_df, add_sentiment_scores
 
 # Allow nested event loops (needed for notebooks or other async contexts)
-nest_asyncio.apply()
+#nest_asyncio.apply()
 
 app = Flask(__name__)
 CORS(app)  # Enable Cross-Origin Resource Sharing for local frontend use
@@ -48,9 +48,12 @@ def receive_url():
     url = data.get('url')
 
     try:
-        loop = asyncio.get_event_loop()
+        # loop = asyncio.get_event_loop()
+        # df = loop.run_until_complete(load_and_prepare_reddit_df(url, reddit))
+        # df = add_sentiment_scores(df)
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         df = loop.run_until_complete(load_and_prepare_reddit_df(url, reddit))
-        df = add_sentiment_scores(df)
         result = df.to_dict(orient='records')
         return jsonify({"status": "success", "data": result}), 200
     except Exception as e:
