@@ -2,6 +2,13 @@ console.log("Reddit Extension Loaded");
 
 let lastUrl = location.href;
 
+/**
+ * Detects whether the given URL is a Reddit thread page,
+ * stores it in Chrome local storage, and sends it to the backend.
+ * Clears stored URL if not a valid thread.
+ *
+ * @param {string} url - The current page URL
+ */
 function handleUrlUpdate(url) {
   const isThreadPage = /\/comments\/[a-z0-9]+/i.test(new URL(url).pathname);
 
@@ -12,9 +19,10 @@ function handleUrlUpdate(url) {
       console.log("Stored reddit_url");
     });
 
-    const postId = url.match(/comments\/([^\/]+)/)?.[1] || null;
-    console.log("Post ID:", postId);
+    // const postId = url.match(/comments\/([^\/]+)/)?.[1] || null;
+    // console.log("Post ID:", postId);
 
+    // ping backend immediately for logging or caching
     fetch("https://reddit-extension-backend-541360204677.us-central1.run.app/receive_url", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -38,7 +46,7 @@ function handleUrlUpdate(url) {
 // Run once on initial load
 handleUrlUpdate(location.href);
 
-// Also re-check periodically (Reddit SPA navigation)
+// Poll for URL changes (Reddit uses SPA-style routing)
 setInterval(() => {
   const currentUrl = location.href;
   if (currentUrl !== lastUrl) {
