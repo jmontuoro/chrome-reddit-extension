@@ -1,11 +1,13 @@
+// DOM containers for rendering
 const barContainer = document.getElementById("graph-container");
 const sunburstContainer = document.getElementById("sunburst-container");
 const legendContainer = document.getElementById("legend-container");
 
-// Render shared sentiment scale bar first
-//renderSentimentLegend();
-
-// Entry point: get Reddit URL and trigger visualization
+/**
+ * Main entry point: retrieves stored Reddit thread URL,
+ * validates it's a Reddit post page, and triggers data fetching
+ * and rendering of sentiment visualizations.
+ */
 chrome.storage.local.get("reddit_url", (result) => {
   const url = result.reddit_url;
 
@@ -24,7 +26,7 @@ chrome.storage.local.get("reddit_url", (result) => {
     sunburstContainer.innerHTML = "";
     legendContainer.innerHTML = "";
 
-    // Show message
+    // Display fallback instructions
     barContainer.innerHTML = `
       <div style="text-align: center; padding: 1em;">
         <img src="images/comment-icon.png" alt="comment icon" style="width: 80px; opacity: 1; margin-bottom: 10px;" />
@@ -38,7 +40,7 @@ chrome.storage.local.get("reddit_url", (result) => {
     return;
   }
 
-  // If thread is valid, fetch and render
+  // If Reddit thread is valid, fetch and render
   fetchSentimentData(url)
     .then(data => {
       renderSentimentLegend(data);
@@ -54,8 +56,12 @@ chrome.storage.local.get("reddit_url", (result) => {
 
 
 
-// Draw horizontal sentiment scale
-// future idea: plot relevant sentiment scores on the sentiment scale: pink vertical line for total post sentiment, cyan line for the head thread's sentiment 
+/**
+ * Renders the horizontal sentiment scale using a heatmap gradient.
+ * Also injects sentiment-related insights above the plot.
+ * 
+ * @param {Object} data - Full Reddit thread sentiment data object
+ */
 function renderSentimentLegend(data) {
   const gradientTrace = {
     type: "heatmap",
@@ -83,7 +89,7 @@ function renderSentimentLegend(data) {
     annotations
   };
 
-  renderInsights(layout, data); //expand here
+  renderInsights(layout, data); //Adds key insights (e.g. avg sentiment markers)
   // Clear previous content and render new legend
   legendContainer.innerHTML = "";
   Plotly.newPlot("legend-container", [gradientTrace], layout, {
@@ -92,7 +98,13 @@ function renderSentimentLegend(data) {
   });
 }
 
-// Fetch parsed comment data from backend
+/**
+ * Sends a POST request to the backend with the Reddit thread URL,
+ * and returns parsed sentiment data.
+ *
+ * @param {string} url - The Reddit thread URL
+ * @returns {Promise<Object[]>} - Promise resolving to sentiment-analyzed comment data
+ */
 function fetchSentimentData(url) {
   return fetch("https://reddit-extension-backend-541360204677.us-central1.run.app/receive_url", {
     method: "POST",
@@ -108,6 +120,13 @@ function fetchSentimentData(url) {
     });
 }
 
+/**
+ * Adds vertical marker lines and annotations to the sentiment legend
+ * to indicate average sentiment and OP sentiment values.
+ *
+ * @param {Object} layout - Plotly layout object to mutate
+ * @param {Object[]} data - Array of Reddit comments with sentiment scores
+ */
 function renderInsights(layout, data) {
   if (!data || data.length === 0) return;
 
@@ -164,7 +183,12 @@ function renderInsights(layout, data) {
 
 
 
-// Build and render bar chart from sentiment summary
+/**
+ * Renders a bar chart showing the number of comments per OC bin,
+ * along with author information, average sentiment, and scores.
+ *
+ * @param {Object[]} data - Flattened Reddit comment data with sentiment
+ */
 function renderBarChart(data) {
   const summary = {};
 
@@ -235,7 +259,15 @@ function renderBarChart(data) {
 
 
 
-// Build and render sunburst chart with hierarchical sentiment
+/**
+ * Renders a sunburst chart that visualizes the hierarchical structure
+ * of Reddit comments and their associated sentiment.
+ *
+ * Each segment represents a comment, nested by parent ID, and is
+ * color-coded by its sentiment score.
+ *
+ * @param {Object[]} data - Array of Reddit comments with sentiment scores
+ */
 function renderSunburstChart(data) {
   normalizeParentIds(data);
   const filtered = filterValidHierarchy(data);
@@ -276,12 +308,25 @@ function renderSunburstChart(data) {
   });
 }
 
+/**
+ * Normalizes Reddit-style parent IDs (e.g. t1_xxxx) to raw comment IDs.
+ * Adds a `parent` field to each comment row for use in Plotly sunburst.
+ *
+ * @param {Object[]} data - Reddit comments
+ */
 function normalizeParentIds(data) {
   data.forEach(row => {
     row.parent = row.parent_id?.replace(/^t[13]_/, "") || "";
   });
 }
 
+/**
+ * Filters comment data to ensure valid parent-child hierarchy.
+ * Only includes comments whose parents are also in the dataset.
+ *
+ * @param {Object[]} data - Reddit comments
+ * @returns {Object[]} - Filtered comments with valid ancestry
+ */
 function filterValidHierarchy(data) {
   const validIds = new Set(data.map(r => r.id));
   return data.filter(r => r.parent === "" || validIds.has(r.parent));
