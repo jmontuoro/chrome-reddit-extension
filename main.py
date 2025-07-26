@@ -1,3 +1,9 @@
+#Generative AI Disclaimer:
+''' This file contains portions of code and documentation assisted by generative AI (ChatGPT, Copilot),
+particularly for converting Python functions. Notably, assistance was used in structuring async Reddit scraping.
+All functionality was implemented, reviewed, and adapted by Jackson Montuoro. '''
+
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import asyncio
