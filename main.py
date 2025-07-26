@@ -30,36 +30,13 @@ reddit = asyncpraw.Reddit(
 @app.route('/receive_url', methods=['POST'])
 def receive_url():
     """
-    Flask route to receive a Reddit thread URL via POST request,
-    scrape comments and metadata using AsyncPRAW, compute sentiment,
-    and return a list of processed comments.
-
-    Request JSON:
-        {
-            "url": "<Reddit thread URL>"
-        }
-
-    Response JSON:
-        {
-            "status": "success",
-            "data": [ ... list of comments with sentiment ... ]
-        }
-        or
-        {
-            "status": "error",
-            "message": "<error message>"
-        }
+    Receives a Reddit thread URL, fetches and processes comment data with sentiment.
     """
     data = request.get_json()
     url = data.get('url')
 
     try:
-        # loop = asyncio.get_event_loop()
-        # df = loop.run_until_complete(load_and_prepare_reddit_df(url, reddit))
-        # df = add_sentiment_scores(df)
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        df = loop.run_until_complete(load_and_prepare_reddit_df(url, reddit))
+        df = asyncio.run(load_and_prepare_reddit_df(url, reddit))
         result = df.to_dict(orient='records')
         return jsonify({"status": "success", "data": result}), 200
     except Exception as e:
