@@ -48,10 +48,16 @@
 
   <!-- Add a wrapper with ID for toggling -->
   <div id="legend-header">
-    <h3>Sentiment Scale</h3>
-    <p id="legend-status" class="loading-text">Loading legend...</p>
+    <h3>Sentiment Scale | Bias Scale</h3>
+    <p id="legend-status" class="loading-text">Loading key insights...</p>
   </div>
-  <div id="legend-container"></div>
+  
+  <!-- Render sentiment legend and bias legend side by side-->
+  <div style="display: flex; justify-content: space-evenly;">
+    <div id="legend-container"></div> 
+    <div id="bias-legend-container"></div>
+  </div>
+
 
   <!-- Charts only shown in the popup window -->
   <div class="advanced-visuals">

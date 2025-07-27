@@ -63,6 +63,7 @@ chrome.storage.local.get("reddit_url", (result) => {
     .then(data => {
       if (!isInPopupWindow) {
         renderSentimentLegend(data);
+        renderBiasLegend(data);
       }
       if (isInPopupWindow) {
         renderBarChart(data);
@@ -109,13 +110,57 @@ function renderSentimentLegend(data) {
     ]
   };
 
-  renderInsights(layout, data); // this will still work fine
+  renderInsights(layout, data, 'sentiment'); // this will still work fine
   document.getElementById("legend-status").textContent = ""; // clear it before rendering
   Plotly.newPlot("legend-container", [gradientTrace], layout, {
     displayModeBar: false,
     staticPlot: true
   });
 }
+
+/**
+ * Renders a vertical bias scale legend using a Plotly heatmap,
+ * styled to match the sentiment scale. The scale runs from 
+ * light blue (low bias) at the bottom to purple (high bias) at the top.
+ * Also includes text annotations for "Low Bias" and "High Bias".
+ *
+ * @param {Array} data - Optional comment data array (not directly used, but kept for consistent API).
+ */
+function renderBiasLegend(data) {
+  const gradientTrace = {
+    type: "heatmap",
+    z: Array.from({ length: 201 }, (_, i) => [-1 + i * 0.01]),
+    x: [0],
+    y: Array.from({ length: 201 }, (_, i) => -1 + i * 0.01),
+    colorscale: [
+      [0.0, "lightblue"],
+      [1.0, "purple"]
+    ],
+    showscale: false,
+    hoverinfo: "none"
+  };
+
+  const layout = {
+    xaxis: { visible: false },
+    yaxis: { visible: false },
+    margin: { t: 30, b: 30, l: 30, r: 30 },
+    height: 300,
+    width: 100,
+    annotations: [
+      { x: 0, y: -1.06, text: "Low Bias", showarrow: false, xref: "x", yref: "y", font: { size: 12 } },
+      { x: 0, y: 1.07, text: "High Bias", showarrow: false, xref: "x", yref: "y", font: { size: 12 } }
+    ]
+  };
+
+  renderInsights(layout, data, 'bias')
+  Plotly.newPlot("bias-legend-container", [gradientTrace], layout, {
+    displayModeBar: false,
+    staticPlot: true
+  });
+}
+
+
+
 
 
 /**
@@ -141,66 +186,83 @@ function fetchSentimentData(url) {
 }
 
 /**
- * Adds vertical marker lines and annotations to the sentiment legend
- * to indicate average sentiment and OP sentiment values.
+ * Adds average and OP marker lines and labels to a Plotly layout.
+ * Supports both "sentiment" (range: -1 to 1) and "bias" (range: 0–1 or 0–7).
  *
- * @param {Object} layout - Plotly layout object to mutate
- * @param {Object[]} data - Array of Reddit comments with sentiment scores
+ * @param {Object} layout - Plotly layout object to modify.
+ * @param {Array} data - Array of Reddit comment data.
+ * @param {string} scoreType - Either "sentiment" or "bias".
  */
-function renderInsights(layout, data) {
+function renderInsights(layout, data, scoreType = "sentiment") {
   if (!data || data.length === 0) return;
 
-  const sentiments = data.map(d => d.sentiment || 0);
-  const avgSentiment = sentiments.reduce((a, b) => a + b, 0) / sentiments.length;
+  const scoreKey = scoreType === "bias" ? "bias" : "sentiment";
+  const colorAvg = scoreType === "bias" ? "purple" : "pink";
+  const colorOP = scoreType === "bias" ? "blue" : "cyan";
+
+  const rawScores = data.map(d => d[scoreKey] ?? 0);
+
+  // Detect bias scale range (assume bias is either 0–1 or 0–7, sentiment is -1–1)
+  const normalize = (val) => {
+    if (scoreType === "bias") {
+      const maxBias = Math.max(...rawScores, 1); // fallback to 1 if empty
+      return Math.min(val / maxBias, 1); // normalize to 0–1
+    } else {
+      return (val + 1) / 2; // map sentiment from -1–1 to 0–1
+    }
+  };
+
+  const normScores = rawScores.map(normalize);
+  const avgScore = normScores.reduce((a, b) => a + b, 0) / normScores.length;
 
   const opComment = data.find(d => d.parent_id === "");
-  const opSentiment = opComment ? opComment.sentiment || 0 : 0;
+  const opRaw = opComment ? opComment[scoreKey] ?? 0 : 0;
+  const opScore = normalize(opRaw);
 
-  const yAvg = (avgSentiment + 1) / 2; // scale to [0,1] for y-axis
-  const yOp = (opSentiment + 1) / 2;
-
-  const xPosition = .5; // slightly outside the bar, right side
+  const xPosition = 0.5;
 
   layout.shapes = [
     {
       type: "line",
-      x0: 0, x1: .58,
-      y0: yAvg, y1: yAvg,
+      x0: 0, x1: 0.58,
+      y0: avgScore, y1: avgScore,
       xref: "paper", yref: "paper",
-      line: { color: "pink", width: 2 }
+      line: { color: colorAvg, width: 2 }
     },
     {
       type: "line",
-      x0: 0, x1: .58,
-      y0: yOp, y1: yOp,
+      x0: 0, x1: 0.58,
+      y0: opScore, y1: opScore,
       xref: "paper", yref: "paper",
-      line: { color: "cyan", width: 2 }
+      line: { color: colorOP, width: 2 }
     }
   ];
 
   layout.annotations.push(
     {
       x: xPosition,
-      y: yAvg,
+      y: avgScore,
       text: `Avg`,
       showarrow: false,
       xref: "paper",
       yref: "paper",
-      font: { size: 11, color: "pink" },
+      font: { size: 11, color: colorAvg },
       xanchor: "left"
     },
     {
       x: xPosition,
-      y: yOp,
+      y: opScore,
       text: `OP`,
       showarrow: false,
       xref: "paper",
       yref: "paper",
-      font: { size: 11, color: "cyan" },
+      font: { size: 11, color: colorOP },
       xanchor: "left"
     }
   );
 }
+
+
 
 
 
