@@ -75,3 +75,14 @@ def add_sentiment_scores(df):
         lambda s: 'positive' if s >= 0.05 else 'negative' if s <= -0.05 else 'neutral'
     )
     return df
+
+def add_bias_scores(df):
+    print("[Bias] No model loaded. Returning 0.0 for all scores.")
+
+    def dummy_bias_score(text):
+        # Placeholder logic — Maria will replace this
+        return 0.0
+
+    df['bias'] = df['body'].apply(dummy_bias_score)
+    return df
+

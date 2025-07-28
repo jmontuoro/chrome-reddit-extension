@@ -262,12 +262,6 @@ function renderInsights(layout, data, scoreType = "sentiment") {
   );
 }
 
-
-
-
-
-
-
 /**
  * Renders a bar chart showing the number of comments per OC bin,
  * along with author information, average sentiment, and scores.
