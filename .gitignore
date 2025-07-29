@@ -206,3 +206,4 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 model_t2835ru3/*.safetensors
+.DS_Store
