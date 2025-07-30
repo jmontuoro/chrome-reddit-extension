@@ -21,29 +21,16 @@ reddit = asyncpraw.Reddit(
     user_agent=os.getenv("REDDIT_USER_AGENT")
 )
 
-@app.route('/receive_url', methods=['POST'])
+@app.route('/receive_url', methods=['POST', 'OPTIONS'])
 def receive_url():
-    """
-    Flask route to receive a Reddit thread URL via POST request,
-    scrape comments and metadata using AsyncPRAW, compute sentiment,
-    and return a list of processed comments.
+    if request.method == 'OPTIONS':
+        # Handle CORS preflight
+        response = app.make_default_options_response()
+        response.headers['Access-Control-Allow-Origin'] = 'chrome-extension://gddciniaajmhfjcabblkceekjjlenko'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+        response.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+        return response
 
-    Request JSON:
-        {
-            "url": "<Reddit thread URL>"
-        }
-
-    Response JSON:
-        {
-            "status": "success",
-            "data": [ ... list of comments with sentiment ... ]
-        }
-        or
-        {
-            "status": "error",
-            "message": "<error message>"
-        }
-    """
     data = request.get_json()
     url = data.get('url')
 
@@ -56,6 +43,7 @@ def receive_url():
         return jsonify({"status": "success", "data": result}), 200
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+
 
 
 @app.route('/')
