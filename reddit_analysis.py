@@ -26,27 +26,28 @@ sia = SentimentIntensityAnalyzer()
 
 
 def download_model_from_gcs_if_needed():
-    """
-    Download the bias model from GCS if it's not already cached locally.
+    local_dir = "/tmp/bias_model/model_t2835ru3"
+    if os.path.exists(local_dir):
+        return local_dir
 
-    Returns:
-        str: Local file path to the model.
-    """
-    local_path = "/tmp/model.safetensors"
-    if os.path.exists(local_path):
-        return local_path
-
-    print("[Bias] Downloading model from GCS...")
+    print("[Bias] Downloading tokenizer/config files from GCS...")
     bucket_name = "reddit-bias-model"
-    blob_path = "model.safetensors"
+    prefix = "bias_model/model_t2835ru3/"
 
     client = storage.Client()
     bucket = client.bucket(bucket_name)
-    blob = bucket.blob(blob_path)
-    blob.download_to_filename(local_path)
 
-    print("[Bias] Download complete.")
-    return local_path
+    # List all files in the GCS subfolder
+    blobs = list(bucket.list_blobs(prefix=prefix))
+    for blob in blobs:
+        rel_path = blob.name.replace(prefix, "")  # file name only
+        local_path = os.path.join(local_dir, rel_path)
+
+        os.makedirs(os.path.dirname(local_path), exist_ok=True)
+        blob.download_to_filename(local_path)
+
+    print("[Bias] Tokenizer/config files downloaded.")
+    return local_dir
 
 
 async def load_and_prepare_reddit_df(url: str, reddit_client=None, max_comments=500):
