@@ -1,0 +1,41 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Unit test / coverage reports
+.pytest_cache/
+.coverage
+htmlcov/
+*.cover
+*.py,cover
+.hypothesis/
+
+# Logs
+*.log
+
+# OS / Editor / Env-specific
+.DS_Store
+.env
+*.env
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# Git and build
+.git/
+.gitignore
+Dockerfile
+*.md
+
+# Node-related (if used for frontend)
+node_modules/
+dist/
+build/
+*.tsbuildinfo
+
+# Chrome Extension build artifacts (if any)
+frontend/build/
+frontend/dist/
+frontend/.cache/
