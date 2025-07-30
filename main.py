@@ -12,7 +12,7 @@ from reddit_analysis import load_and_prepare_reddit_df, add_sentiment_scores, ad
 nest_asyncio.apply()
 
 app = Flask(__name__)
-CORS(app)  # Enable Cross-Origin Resource Sharing for local frontend use
+CORS(app, origins=["chrome-extension://gddciniaajmhfjcabblkceekjjlenko"])  # Enable Cross-Origin Resource Sharing for local frontend use
 
 # Set up Reddit client from environment variables
 reddit = asyncpraw.Reddit(
