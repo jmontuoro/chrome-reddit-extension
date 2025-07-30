@@ -13,7 +13,7 @@ nest_asyncio.apply()
 app = Flask(__name__)
 
 EXTENSION_ORIGIN = "chrome-extension://gddciniaajjmhfjcabblkcekejjlenko"
-CORS(app, origins=[EXTENSION_ORIGIN])  # <-- This alone is enough now
+CORS(app, origins=[EXTENSION_ORIGIN], methods=['GET', 'POST', 'OPTIONS'], allow_headers=['Content-Type'])
 
 reddit = asyncpraw.Reddit(
     client_id=os.getenv("REDDIT_CLIENT_ID"),
@@ -21,8 +21,9 @@ reddit = asyncpraw.Reddit(
     user_agent=os.getenv("REDDIT_USER_AGENT")
 )
 
-@app.route('/receive_url', methods=['POST'])
+@app.route('/receive_url', methods=['POST', 'OPTIONS'])
 def receive_url():
+    print('receive_url hit:', request.method)
     data = request.get_json()
     url = data.get('url')
 
