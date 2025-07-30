@@ -1,8 +1,15 @@
 import pandas as pd
+#reddit imports
 import asyncio
 import asyncpraw
+#imports for sentiment analysis
 from nltk.sentiment import SentimentIntensityAnalyzer
 import nltk
+#imports for bias analysis
+import torch
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
+from safetensors.torch import load_file
+import os
 
 # Download the VADER lexicon once
 nltk.download('vader_lexicon', quiet=True)
