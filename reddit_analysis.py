@@ -165,22 +165,16 @@ def load_bias_model():
 
     print("[Bias] Downloading and loading tokenizer and model...")
 
-    # Download model weights (safetensors)
-    model_path = download_model_from_gcs_if_needed()
+    model_dir = download_model_from_gcs_if_needed()  # downloads all model files including safetensors
 
-    # Download model config/tokenizer into a temporary dir
-    temp_model_dir = "/tmp/bias_model"
-    if not os.path.exists(temp_model_dir):
-        os.makedirs(temp_model_dir, exist_ok=True)
-        # Assume you also upload the config/tokenizer files to GCS
-        storage.Client().bucket("reddit-bias-model").blob("model_config/config.json").download_to_filename(f"{temp_model_dir}/config.json")
-        storage.Client().bucket("reddit-bias-model").blob("tokenizer_config/tokenizer.json").download_to_filename(f"{temp_model_dir}/tokenizer.json")
-        # repeat for any other files (vocab.txt, merges.txt) your tokenizer needs
-
-    _tokenizer = AutoTokenizer.from_pretrained(temp_model_dir)
-    config = AutoModelForSequenceClassification.from_pretrained(temp_model_dir).config
+    _tokenizer = AutoTokenizer.from_pretrained(model_dir)
+    config = AutoModelForSequenceClassification.from_pretrained(model_dir).config
     _model = AutoModelForSequenceClassification.from_config(config)
-    load_file(model_path, _model)  # loads safetensors into the model
+
+    # Now safetensors is co-located with config/tokenizer
+    safetensor_path = os.path.join(model_dir, "model.safetensors")
+    load_file(safetensor_path, _model)
+
     _model.eval()
     BIAS_LABELS = [v for k, v in sorted(config.id2label.items(), key=lambda x: int(k))]
 
