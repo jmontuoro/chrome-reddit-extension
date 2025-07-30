@@ -6,7 +6,7 @@ import os
 import concurrent.futures
 import nest_asyncio
 
-from reddit_analysis import load_and_prepare_reddit_df, add_sentiment_scores
+from reddit_analysis import load_and_prepare_reddit_df, add_sentiment_scores, add_bias_scores
 
 # Allow nested event loops (needed for notebooks or other async contexts)
 nest_asyncio.apply()
