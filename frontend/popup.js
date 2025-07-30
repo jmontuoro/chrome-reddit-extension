@@ -61,6 +61,7 @@ chrome.storage.local.get("reddit_url", (result) => {
 
   fetchSentimentData(url)
     .then(data => {
+      console.log("Fetched data: ", data)
       if (!isInPopupWindow) {
         renderSentimentLegend(data);
         renderBiasLegend(data);
