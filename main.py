@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, make_response
 from flask_cors import CORS
 import asyncio
 import asyncpraw
@@ -8,11 +8,14 @@ import nest_asyncio
 
 from reddit_analysis import load_and_prepare_reddit_df, add_sentiment_scores, add_bias_scores
 
-# Allow nested event loops (needed for notebooks or other async contexts)
+# Allow nested event loops (needed for notebooks or async contexts)
 nest_asyncio.apply()
 
 app = Flask(__name__)
-CORS(app, origins=["chrome-extension://gddciniaajmhfjcabblkceekjjlenko"])  # Enable Cross-Origin Resource Sharing for local frontend use
+
+# Explicitly allow Chrome extension origin
+EXTENSION_ORIGIN = "chrome-extension://gddciniaajmhfjcabblkceekjjlenko"
+CORS(app, origins=[EXTENSION_ORIGIN], supports_credentials=True)
 
 # Set up Reddit client from environment variables
 reddit = asyncpraw.Reddit(
@@ -24,11 +27,11 @@ reddit = asyncpraw.Reddit(
 @app.route('/receive_url', methods=['POST', 'OPTIONS'])
 def receive_url():
     if request.method == 'OPTIONS':
-        # Handle CORS preflight
-        response = app.make_default_options_response()
-        response.headers['Access-Control-Allow-Origin'] = 'chrome-extension://gddciniaajmhfjcabblkceekjjlenko'
-        response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+        response = make_response()
+        response.headers['Access-Control-Allow-Origin'] = EXTENSION_ORIGIN
         response.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+        response.headers['Access-Control-Max-Age'] = '3600'
         return response
 
     data = request.get_json()
@@ -40,17 +43,18 @@ def receive_url():
         df = add_sentiment_scores(df)
         df = add_bias_scores(df)
         result = df.to_dict(orient='records')
-        return jsonify({"status": "success", "data": result}), 200
+
+        response = jsonify({"status": "success", "data": result})
+        response.headers['Access-Control-Allow-Origin'] = EXTENSION_ORIGIN
+        return response, 200
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
-
-
+        response = jsonify({"status": "error", "message": str(e)})
+        response.headers['Access-Control-Allow-Origin'] = EXTENSION_ORIGIN
+        return response, 500
 
 @app.route('/')
 def root():
-    """Basic health check route for server."""
     return 'Reddit Extension Backend is Live!'
 
 if __name__ == '__main__':
-    # Start Flask server with dynamic or fallback port
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 8080)))
