@@ -9,6 +9,8 @@ steps:
       - '--path=.'
     id: Buildpack
     entrypoint: pack
+    options:
+      machineType: E2_HIGHCPU_8
   - name: gcr.io/cloud-builders/docker
     args:
       - push
