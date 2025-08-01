@@ -1,14 +1,11 @@
 steps:
-  - name: gcr.io/k8s-skaffold/pack
+  - name: 'gcr.io/cloud-builders/docker'
     args:
       - build
-      - >-
-        $_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA
-      - '--builder=gcr.io/buildpacks/builder:latest'
-      - '--network=cloudbuild'
-      - '--path=.'
-    id: Buildpack
-    entrypoint: pack
+      - -t
+      - $_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA
+      - .
+    id: Build
 
   - name: gcr.io/cloud-builders/docker
     args:
