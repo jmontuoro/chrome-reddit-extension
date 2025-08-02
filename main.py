@@ -88,24 +88,37 @@ def test_model_download():
 @app.route('/test-bias', methods=['GET'])
 def test_bias():
     """
-    Minimal test route to verify that the bias model loads and returns a prediction.
+    Test route to inspect raw logits and softmax probabilities from the bias model.
     """
     global bias_model_path
     if not bias_model_path or not os.path.exists(bias_model_path):
         return jsonify({'error': 'Bias model not loaded or missing'}), 500
 
     try:
-        from reddit_analysis import add_bias_scores
-        import pandas as pd
+        import torch
+        from transformers import BertTokenizer, BertForSequenceClassification
+        import torch.nn.functional as F
+
+        model = BertForSequenceClassification.from_pretrained(bias_model_path, local_files_only=True)
+        tokenizer = BertTokenizer.from_pretrained(bias_model_path, local_files_only=True)
+        model.eval()
 
         test_text = "I hate you"
-        df = pd.DataFrame({'body': [test_text]})
-        df = add_bias_scores(df, model_path=bias_model_path)
-        prediction = df['bias_label'].iloc[0] if 'bias_label' in df else 'unknown'
+        inputs = tokenizer(test_text, return_tensors="pt", truncation=True, max_length=512)
+        with torch.no_grad():
+            logits = model(**inputs).logits
+            probs = F.softmax(logits, dim=1).squeeze().tolist()
+            label_id = torch.argmax(logits, dim=1).item()
 
-        return jsonify({'input': test_text, 'predicted_bias_label': prediction})
+        return jsonify({
+            'input': test_text,
+            'label_id': label_id,
+            'logits': logits.squeeze().tolist(),
+            'softmax_probs': probs
+        })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
 
 
 if __name__ == '__main__':
