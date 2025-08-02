@@ -2,37 +2,53 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - build
-      - '-t'
-      - 'gcr.io/$PROJECT_ID/reddit-extension-backend:$COMMIT_SHA'
-      - '.'
-    id: Build Image
-    waitFor: ['-']
+      - -t
+      - $_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA
+      - .
+    id: Build
 
-  - name: 'gcr.io/cloud-builders/docker'
+  - name: gcr.io/cloud-builders/docker
     args:
       - push
-      - 'gcr.io/$PROJECT_ID/reddit-extension-backend:$COMMIT_SHA'
-    id: Push Image
-    waitFor: ['Build Image']
+      - >-
+        $_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA
+    id: Push
 
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
     args:
       - run
-      - deploy
-      - reddit-extension-backend
+      - services
+      - update
+      - $_SERVICE_NAME
       - '--platform=managed'
-      - '--region=us-central1'
-      - '--image=gcr.io/$PROJECT_ID/reddit-extension-backend:$COMMIT_SHA'
-      - '--allow-unauthenticated'
+      - >-
+        --image=$_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA
+      - >-
+        --labels=managed-by=gcp-cloud-build-deploy-cloud-run,commit-sha=$COMMIT_SHA,gcb-build-id=$BUILD_ID,gcb-trigger-id=$_TRIGGER_ID
+      - '--region=$_DEPLOY_REGION'
+      - '--quiet'
     id: Deploy
-    waitFor: ['Push Image']
+    entrypoint: gcloud
+
+images:
+  - >-
+    $_AR_HOSTNAME/$_AR_PROJECT_ID/$_AR_REPOSITORY/$REPO_NAME/$_SERVICE_NAME:$COMMIT_SHA
 
 options:
   machineType: E2_HIGHCPU_8
-  logging: CLOUD_LOGGING_ONLY
-  dynamic_substitutions: true
-  diskSizeGb: 100
   substitutionOption: ALLOW_LOOSE
+  logging: CLOUD_LOGGING_ONLY
 
-images:
-  - 'gcr.io/$PROJECT_ID/reddit-extension-backend:$COMMIT_SHA'
+substitutions:
+  _AR_PROJECT_ID: august-now-465219-j5
+  _PLATFORM: managed
+  _SERVICE_NAME: reddit-extension-backend
+  _DEPLOY_REGION: us-central1
+  _TRIGGER_ID: 7555eff5-dfac-4747-bfc7-ef4c8a3cf2ef
+  _AR_HOSTNAME: us-central1-docker.pkg.dev
+  _AR_REPOSITORY: cloud-run-source-deploy
+
+tags:
+  - gcp-cloud-build-deploy-cloud-run
+  - gcp-cloud-build-deploy-cloud-run-managed
+  - reddit-extension-backend
