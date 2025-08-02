@@ -266,6 +266,11 @@ function computeSentimentLines(layout, data) {
   );
 }
 
+function squashSigmoid(value, steepness = 6) {
+  // Logistic sigmoid centered at 0.5
+  return 1 / (1 + Math.exp(-steepness * (value - 0.5)));
+}
+
 
 
 /**
@@ -296,21 +301,36 @@ function computeBiasDots(layout, data) {
 
   const sortedLabels = Object.keys(labelAverages).sort((a, b) => labelAverages[b] - labelAverages[a]);
 
-  layout.shapes = []; // No lines — only labeled points
+  layout.shapes = [];
 
-  layout.annotations.push(
-    ...sortedLabels.map((label) => ({
-      x: 0.5,
-      y: Math.min(labelAverages[label], 1),
+  for (const label of sortedLabels) {
+    const original = labelAverages[label];
+    const squashed = squashSigmoid(original);
+
+    layout.shapes.push({
+      type: "circle",
+      xref: "paper", yref: "paper",
+      x0: 0.48, x1: 0.5,
+      y0: squashed - 0.005, y1: squashed + 0.005,
+      fillcolor: "purple",
+      line: { width: 0 },
+      layer: "above"
+    });
+
+    layout.annotations.push({
+      x: 0.52,
+      y: squashed,
       text: label,
       showarrow: false,
       xref: "paper", yref: "paper",
       font: { size: 10, color: "purple" },
       xanchor: "left",
       layer: "above"
-    }))
-  );
+    });
+  }
 }
+
+
 
 
 /**
