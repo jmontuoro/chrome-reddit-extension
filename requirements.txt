@@ -5,5 +5,8 @@ asyncpraw==7.7.0
 nltk==3.8.1
 pandas==2.2.2
 nest_asyncio==1.6.0
+
 google-cloud-storage==2.16.0
+transformers==4.31.0
+torch==2.0.1
 
