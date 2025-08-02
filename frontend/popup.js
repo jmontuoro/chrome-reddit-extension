@@ -223,8 +223,7 @@ function computeSentimentLines(layout, data) {
 
   const xPosition = 0.5;
 
-  layout.shapes = [];
-  layout.shapes.push([
+  layout.shapes = [
     {
       type: "line",
       x0: 0, x1: 0.58,
@@ -241,7 +240,7 @@ function computeSentimentLines(layout, data) {
       line: { color: "cyan", width: 2 },
       layer: "above"
     }
-  ]);
+  ];
 
   layout.annotations.push(
     {
