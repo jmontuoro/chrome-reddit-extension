@@ -9,15 +9,15 @@ RUN apt-get update && apt-get install -y curl gnupg apt-transport-https ca-certi
     apt-get update && apt-get install -y google-cloud-sdk && \
     rm -rf /var/lib/apt/lists/*
 
-# ⬇️ Download model early so it becomes its own cached layer
+#  Download model early so it becomes its own cached layer
 RUN mkdir -p /app/bias_model && \
     gsutil cp gs://reddit-bias-model/bias_model/model_t2835ru3/* /app/bias_model/
 
-# ✅ Install dependencies (cached if requirements.txt doesn’t change)
+# Install dependencies (cached if requirements.txt doesn’t change)
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# ✅ Copy rest of the app (code changes won’t invalidate model/download layer)
+# Copy rest of the app (code changes won’t invalidate model/download layer)
 COPY . .
 
 ENV PORT=8080
