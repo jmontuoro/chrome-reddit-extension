@@ -37,7 +37,7 @@ def load_bias_model():
         _tokenizer = BertTokenizer.from_pretrained(_model_path, local_files_only=True)
         _model = BertForSequenceClassification.from_pretrained(_model_path, local_files_only=True)
         _model.eval()
-        print("✅ Bias model and tokenizer loaded.")
+        print("Bias model and tokenizer loaded.")
 
 def flatten_comments(comment_forest, level=0):
     flat_list = []
