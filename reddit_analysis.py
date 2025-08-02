@@ -7,11 +7,12 @@ import torch
 from nltk.sentiment import SentimentIntensityAnalyzer
 from transformers import BertTokenizer, BertForSequenceClassification
 
-# Load model and tokenizer
+# Path to where model files are stored (downloaded from GCS)
 _model_path = "/tmp/bias_model"
-tokenizer = BertTokenizer.from_pretrained(_model_path, local_files_only=True)
-model = BertForSequenceClassification.from_pretrained(_model_path, local_files_only=True)
-model.eval()
+
+# Lazy-loading variables
+_tokenizer = None
+_model = None
 
 # Map label IDs to strings
 id2label = {
@@ -28,6 +29,15 @@ id2label = {
 # Download the VADER lexicon once
 nltk.download('vader_lexicon', quiet=True)
 sia = SentimentIntensityAnalyzer()
+
+def load_bias_model():
+    """Load the bias model and tokenizer from local disk, only once."""
+    global _tokenizer, _model
+    if _tokenizer is None or _model is None:
+        _tokenizer = BertTokenizer.from_pretrained(_model_path, local_files_only=True)
+        _model = BertForSequenceClassification.from_pretrained(_model_path, local_files_only=True)
+        _model.eval()
+        print("✅ Bias model and tokenizer loaded.")
 
 def flatten_comments(comment_forest, level=0):
     flat_list = []
@@ -63,7 +73,7 @@ async def load_and_prepare_reddit_df(url: str, reddit_client=None, max_comments=
     submission = await reddit_client.submission(url=url)
     await submission.load()
     submission.comment_sort = "best"
-    await submission.comments.replace_more(limit=8) #reduces depth- helpful for large threads.
+    await submission.comments.replace_more(limit=8)  # reduces depth - helpful for large threads
 
     # Step 1: Flatten all comments into a list of dicts
     flat_comments = flatten_comments(submission.comments)
@@ -98,12 +108,13 @@ def add_sentiment_scores(df):
     return df
 
 def test_bias_prediction(text):
-    inputs = tokenizer(text, return_tensors="pt", truncation=True, max_length=512)
+    """Run a test prediction to confirm model is working."""
+    load_bias_model()
+    inputs = _tokenizer(text, return_tensors="pt", truncation=True, max_length=512)
     with torch.no_grad():
-        logits = model(**inputs).logits
+        logits = _model(**inputs).logits
         label_id = torch.argmax(logits, dim=1).item()
         return id2label[label_id]
-
 
 def add_bias_scores(df):
     print("[Bias] No model loaded. Returning 0.0 for all scores.")
@@ -114,4 +125,3 @@ def add_bias_scores(df):
 
     df['bias'] = df['body'].apply(dummy_bias_score)
     return df
-
