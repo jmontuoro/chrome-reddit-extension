@@ -230,14 +230,16 @@ function computeSentimentLines(layout, data) {
       x0: 0, x1: 0.58,
       y0: avgScore, y1: avgScore,
       xref: "paper", yref: "paper",
-      line: { color: "pink", width: 2 }
+      line: { color: "pink", width: 2 },
+      layer: "above"
     },
     {
       type: "line",
       x0: 0, x1: 0.58,
       y0: opScore, y1: opScore,
       xref: "paper", yref: "paper",
-      line: { color: "cyan", width: 2 }
+      line: { color: "cyan", width: 2 },
+      layer: "above"
     }
   ]);
 
@@ -249,7 +251,8 @@ function computeSentimentLines(layout, data) {
       showarrow: false,
       xref: "paper", yref: "paper",
       font: { size: 11, color: "pink" },
-      xanchor: "left"
+      xanchor: "left",
+      layer: "above"
     },
     {
       x: xPosition,
@@ -258,7 +261,8 @@ function computeSentimentLines(layout, data) {
       showarrow: false,
       xref: "paper", yref: "paper",
       font: { size: 11, color: "cyan" },
-      xanchor: "left"
+      xanchor: "left",
+      layer: "above"
     }
   );
 }
