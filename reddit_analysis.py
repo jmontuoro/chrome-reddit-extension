@@ -116,12 +116,21 @@ def test_bias_prediction(text):
         label_id = torch.argmax(logits, dim=1).item()
         return id2label[label_id]
 
-def add_bias_scores(df):
-    print("[Bias] No model loaded. Returning 0.0 for all scores.")
+def add_bias_scores(df, model_path="/tmp/bias_model"):
+    """
+    Add bias predictions to each comment using the downloaded model.
+    """
+    tokenizer = BertTokenizer.from_pretrained(model_path, local_files_only=True)
+    model = BertForSequenceClassification.from_pretrained(model_path, local_files_only=True)
+    model.eval()
 
-    def dummy_bias_score(text):
-        # Placeholder logic — Maria will replace this
-        return 0.0
+    def predict_bias(text):
+        inputs = tokenizer(text, return_tensors="pt", truncation=True, max_length=512)
+        with torch.no_grad():
+            logits = model(**inputs).logits
+            label_id = torch.argmax(logits, dim=1).item()
+            return id2label[label_id]
 
-    df['bias'] = df['body'].apply(dummy_bias_score)
+    df['bias'] = df['body'].apply(predict_bias)
     return df
+

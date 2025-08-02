@@ -6,7 +6,7 @@ import os
 import concurrent.futures
 import nest_asyncio
 
-from reddit_analysis import load_and_prepare_reddit_df, add_sentiment_scores
+from reddit_analysis import load_and_prepare_reddit_df, add_sentiment_scores, add_bias_scores
 from model_loader import download_model_from_gcs
 
 # Allow nested event loops (needed for notebooks or other async contexts)
@@ -54,6 +54,11 @@ def receive_url():
         loop = asyncio.get_event_loop()
         df = loop.run_until_complete(load_and_prepare_reddit_df(url, reddit))
         df = add_sentiment_scores(df)
+        # Load bias model if not already cached
+        global bias_model_path
+        if not bias_model_path:
+            bias_model_path = download_model_from_gcs("bias_model")
+        df = add_bias_scores(df, model_path=bias_model_path)
         result = df.to_dict(orient='records')
         return jsonify({"status": "success", "data": result}), 200
     except Exception as e:
