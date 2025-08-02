@@ -147,8 +147,8 @@ function renderBiasLegend(data) {
     height: 300,
     width: 100,
     annotations: [
-      { x: 0, y: -1.00, text: "Low Bias", showarrow: false, xref: "x", yref: "y", font: { size: 12 } },
-      { x: 0, y: 1.00, text: "High Bias", showarrow: false, xref: "x", yref: "y", font: { size: 12 } }
+      { x: 0, y: -1.06, text: "Low Bias", showarrow: false, xref: "x", yref: "y", font: { size: 12 } },
+      { x: 0, y: 1.07, text: "High Bias", showarrow: false, xref: "x", yref: "y", font: { size: 12 } }
     ]
   };
 
@@ -265,6 +265,8 @@ function computeSentimentLines(layout, data) {
     }
   );
 }
+
+
 
 /**
  * Aggregates average bias per label and overlays labeled dots at each score level.
