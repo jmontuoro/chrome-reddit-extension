@@ -113,12 +113,14 @@ def test_bias_prediction(text):
     inputs = _tokenizer(text, return_tensors="pt", truncation=True, max_length=512)
     with torch.no_grad():
         logits = _model(**inputs).logits
-        label_id = torch.argmax(logits, dim=1).item()
-        return id2label[label_id]
+        probs = torch.softmax(logits, dim=1).squeeze().tolist()
+        return {id2label[i]: round(prob, 4) for i, prob in enumerate(probs)}
+
 
 def add_bias_scores(df, model_path="/tmp/bias_model"):
     """
-    Add bias predictions to each comment using the downloaded model.
+    Add multi-label bias predictions to each comment using the downloaded model.
+    Each row will contain a dictionary of label probabilities.
     """
     tokenizer = BertTokenizer.from_pretrained(model_path, local_files_only=True)
     model = BertForSequenceClassification.from_pretrained(model_path, local_files_only=True)
@@ -128,8 +130,8 @@ def add_bias_scores(df, model_path="/tmp/bias_model"):
         inputs = tokenizer(text, return_tensors="pt", truncation=True, max_length=512)
         with torch.no_grad():
             logits = model(**inputs).logits
-            label_id = torch.argmax(logits, dim=1).item()
-            return id2label[label_id]
+            probs = torch.softmax(logits, dim=1).squeeze().tolist()
+            return {id2label[i]: round(prob, 4) for i, prob in enumerate(probs)}
 
     df['bias'] = df['body'].apply(predict_bias)
     return df
