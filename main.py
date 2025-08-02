@@ -12,13 +12,7 @@ from model_loader import download_model_from_gcs
 # Allow nested event loops (needed for notebooks or other async contexts)
 nest_asyncio.apply()
 
-# Download bias model from GCS and cache to /tmp
-try:
-    bias_model_path = download_model_from_gcs("bias_model")
-except Exception as e:
-    print(f"Model download failed: {e}")
-    bias_model_path = None
-
+bias_model_path = None  # will be filled on request
 
 app = Flask(__name__)
 CORS(app)  # Enable Cross-Origin Resource Sharing for local frontend use
@@ -74,9 +68,16 @@ def root():
 @app.route('/test-model-download')
 def test_model_download():
     """Check if model files were downloaded from GCS."""
-    if bias_model_path and os.path.exists(bias_model_path):
-        files = os.listdir(bias_model_path)
-        return jsonify({"status": "success", "model_files": files}), 200
+    global bias_model_path
+    try:
+        if not bias_model_path:
+            bias_model_path = download_model_from_gcs("bias_model")
+        if os.path.exists(bias_model_path):
+            files = os.listdir(bias_model_path)
+            return jsonify({"status": "success", "model_files": files}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
     return jsonify({"status": "error", "message": "Model path missing or invalid"}), 500
 
 if __name__ == '__main__':
