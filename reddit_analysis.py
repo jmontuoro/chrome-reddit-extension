@@ -9,8 +9,8 @@ from transformers import BertTokenizer, BertForSequenceClassification
 
 # Load model and tokenizer
 _model_path = "/tmp/bias_model"
-tokenizer = BertTokenizer.from_pretrained(_model_path)
-model = BertForSequenceClassification.from_pretrained(_model_path)
+tokenizer = BertTokenizer.from_pretrained(_model_path, local_files_only=True)
+model = BertForSequenceClassification.from_pretrained(_model_path, local_files_only=True)
 model.eval()
 
 # Map label IDs to strings
