@@ -1,8 +1,29 @@
 import pandas as pd
 import asyncio
 import asyncpraw
-from nltk.sentiment import SentimentIntensityAnalyzer
 import nltk
+import torch
+
+from nltk.sentiment import SentimentIntensityAnalyzer
+from transformers import BertTokenizer, BertForSequenceClassification
+
+# Load model and tokenizer
+_model_path = "/tmp/bias_model"
+tokenizer = BertTokenizer.from_pretrained(_model_path)
+model = BertForSequenceClassification.from_pretrained(_model_path)
+model.eval()
+
+# Map label IDs to strings
+id2label = {
+    0: "None",
+    1: "body",
+    2: "culture",
+    3: "disabled",
+    4: "gender",
+    5: "race",
+    6: "social",
+    7: "victim"
+}
 
 # Download the VADER lexicon once
 nltk.download('vader_lexicon', quiet=True)
@@ -75,6 +96,14 @@ def add_sentiment_scores(df):
         lambda s: 'positive' if s >= 0.05 else 'negative' if s <= -0.05 else 'neutral'
     )
     return df
+
+def test_bias_prediction(text):
+    inputs = tokenizer(text, return_tensors="pt", truncation=True, max_length=512)
+    with torch.no_grad():
+        logits = model(**inputs).logits
+        label_id = torch.argmax(logits, dim=1).item()
+        return id2label[label_id]
+
 
 def add_bias_scores(df):
     print("[Bias] No model loaded. Returning 0.0 for all scores.")
