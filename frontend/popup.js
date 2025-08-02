@@ -131,7 +131,7 @@ function renderBiasLegend(data) {
     type: "heatmap",
     z: Array.from({ length: 201 }, (_, i) => [-1 + i * 0.01]),
     x: [0],
-    y: Array.from({ length: 201 }, (_, i) => -1 + i * 0.01),
+    y: Array.from({ length: 201 }, (_, i) => i * 0.01),
     colorscale: [
       [0.0, "lightblue"],
       [1.0, "purple"]
@@ -142,13 +142,15 @@ function renderBiasLegend(data) {
 
   const layout = {
     xaxis: { visible: false },
-    yaxis: { visible: false },
+    yaxis: {
+      visible: false,
+      range: [0, 1]},
     margin: { t: 30, b: 30, l: 30, r: 30 },
     height: 300,
     width: 100,
     annotations: [
-      { x: 0, y: -1.06, text: "Low Bias", showarrow: false, xref: "x", yref: "y", font: { size: 12 } },
-      { x: 0, y: 1.07, text: "High Bias", showarrow: false, xref: "x", yref: "y", font: { size: 12 } }
+      { x: 0, y: 0, text: "Low Bias", showarrow: false, xref: "x", yref: "y" },
+      { x: 0, y: 1, text: "High Bias", showarrow: false, xref: "x", yref: "y" }
     ]
   };
 
@@ -266,10 +268,12 @@ function computeSentimentLines(layout, data) {
   );
 }
 
-function squashSigmoid(value, steepness = 6) {
-  // Logistic sigmoid centered at 0.5
-  return 1 / (1 + Math.exp(-steepness * (value - 0.5)));
+function squashToCenter(value, strength = 0.5) {
+  // Compresses value toward 0.5. Range-preserving.
+  return 0.5 + (value - 0.5) * strength;
 }
+
+
 
 
 
@@ -305,14 +309,14 @@ function computeBiasDots(layout, data) {
 
   for (const label of sortedLabels) {
     const original = labelAverages[label];
-    const squashed = squashSigmoid(original);
+    const squashed = squashToCenter(original);
 
     layout.shapes.push({
       type: "circle",
-      xref: "paper", yref: "paper",
-      x0: 0.48, x1: 0.5,
+      xref: "x", yref: "y",
+      x0: 0.0, x1: 0.05,
       y0: squashed - 0.005, y1: squashed + 0.005,
-      fillcolor: "purple",
+      fillcolor: "red",
       line: { width: 0 },
       layer: "above"
     });
@@ -322,11 +326,12 @@ function computeBiasDots(layout, data) {
       y: squashed,
       text: label,
       showarrow: false,
-      xref: "paper", yref: "paper",
+      xref: "x", yref: "y",
       font: { size: 10, color: "purple" },
       xanchor: "left",
       layer: "above"
     });
+
   }
 }
 
