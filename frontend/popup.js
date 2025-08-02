@@ -304,7 +304,8 @@ function computeBiasDots(layout, data) {
       showarrow: false,
       xref: "paper", yref: "paper",
       font: { size: 10, color: "purple" },
-      xanchor: "left"
+      xanchor: "left",
+      layer: "above"
     }))
   );
 }
