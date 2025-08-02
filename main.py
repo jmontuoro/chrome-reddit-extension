@@ -80,6 +80,29 @@ def test_model_download():
 
     return jsonify({"status": "error", "message": "Model path missing or invalid"}), 500
 
+@app.route('/test-bias', methods=['GET'])
+def test_bias():
+    """
+    Minimal test route to verify that the bias model loads and returns a prediction.
+    """
+    global bias_model_path
+    if not bias_model_path or not os.path.exists(bias_model_path):
+        return jsonify({'error': 'Bias model not loaded or missing'}), 500
+
+    try:
+        from reddit_analysis import add_bias_scores
+        import pandas as pd
+
+        test_text = "I hate you"
+        df = pd.DataFrame({'body': [test_text]})
+        df = add_bias_scores(df, model_path=bias_model_path)
+        prediction = df['bias_label'].iloc[0] if 'bias_label' in df else 'unknown'
+
+        return jsonify({'input': test_text, 'predicted_bias_label': prediction})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 if __name__ == '__main__':
     # Start Flask server with dynamic or fallback port
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 8080)))
