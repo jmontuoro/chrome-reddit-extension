@@ -152,7 +152,7 @@ function renderBiasLegend(data) {
     ]
   };
 
-  renderInsights(layout, data, 'bias')
+  renderInsights(layout, data, 'bias');
   Plotly.newPlot("bias-legend-container", [gradientTrace], layout, {
     displayModeBar: false,
     staticPlot: true
@@ -186,8 +186,10 @@ function fetchSentimentData(url) {
 }
 
 /**
- * Adds average and OP marker lines and labels to a Plotly layout.
- * Supports both "sentiment" (range: -1 to 1) and "bias" (range: 0–1 or 0–7).
+ * Adds annotation overlays to a Plotly layout depending on score type.
+ * 
+ * - For "sentiment", it shows 2 horizontal lines (Avg and OP).
+ * - For "bias", it shows 8 labeled points representing average bias for each label.
  *
  * @param {Object} layout - Plotly layout object to modify.
  * @param {Array} data - Array of Reddit comment data.
@@ -196,47 +198,48 @@ function fetchSentimentData(url) {
 function renderInsights(layout, data, scoreType = "sentiment") {
   if (!data || data.length === 0) return;
 
-  const scoreKey = scoreType === "bias" ? "bias" : "sentiment";
-  const colorAvg = scoreType === "bias" ? "purple" : "pink";
-  const colorOP = scoreType === "bias" ? "blue" : "cyan";
+  if (scoreType === "sentiment") {
+    computeSentimentLines(layout, data);
+  } else if (scoreType === "bias") {
+    computeBiasDots(layout, data);
+  }
+}
 
-  const rawScores = data.map(d => d[scoreKey] ?? 0);
-
-  // Detect bias scale range (assume bias is either 0–1 or 0–7, sentiment is -1–1)
-  const normalize = (val) => {
-    if (scoreType === "bias") {
-      const maxBias = Math.max(...rawScores, 1); // fallback to 1 if empty
-      return Math.min(val / maxBias, 1); // normalize to 0–1
-    } else {
-      return (val + 1) / 2; // map sentiment from -1–1 to 0–1
-    }
-  };
-
-  const normScores = rawScores.map(normalize);
+/**
+ * Computes average and OP sentiment, then overlays horizontal lines and labels.
+ * Sentiment is normalized from [-1, 1] to [0, 1] for rendering purposes.
+ *
+ * @param {Object} layout - Plotly layout object
+ * @param {Array} data - Reddit comment data
+ */
+function computeSentimentLines(layout, data) {
+  const rawScores = data.map(d => d.sentiment ?? 0);
+  const normScores = rawScores.map(s => (s + 1) / 2);
   const avgScore = normScores.reduce((a, b) => a + b, 0) / normScores.length;
 
   const opComment = data.find(d => d.parent_id === "");
-  const opRaw = opComment ? opComment[scoreKey] ?? 0 : 0;
-  const opScore = normalize(opRaw);
+  const opRaw = opComment ? opComment.sentiment ?? 0 : 0;
+  const opScore = (opRaw + 1) / 2;
 
   const xPosition = 0.5;
 
-  layout.shapes = [
+  layout.shapes = [];
+  layout.shapes.push([
     {
       type: "line",
       x0: 0, x1: 0.58,
       y0: avgScore, y1: avgScore,
       xref: "paper", yref: "paper",
-      line: { color: colorAvg, width: 2 }
+      line: { color: "pink", width: 2 }
     },
     {
       type: "line",
       x0: 0, x1: 0.58,
       y0: opScore, y1: opScore,
       xref: "paper", yref: "paper",
-      line: { color: colorOP, width: 2 }
+      line: { color: "cyan", width: 2 }
     }
-  ];
+  ]);
 
   layout.annotations.push(
     {
@@ -244,9 +247,8 @@ function renderInsights(layout, data, scoreType = "sentiment") {
       y: avgScore,
       text: `Avg`,
       showarrow: false,
-      xref: "paper",
-      yref: "paper",
-      font: { size: 11, color: colorAvg },
+      xref: "paper", yref: "paper",
+      font: { size: 11, color: "pink" },
       xanchor: "left"
     },
     {
@@ -254,13 +256,56 @@ function renderInsights(layout, data, scoreType = "sentiment") {
       y: opScore,
       text: `OP`,
       showarrow: false,
-      xref: "paper",
-      yref: "paper",
-      font: { size: 11, color: colorOP },
+      xref: "paper", yref: "paper",
+      font: { size: 11, color: "cyan" },
       xanchor: "left"
     }
   );
 }
+
+/**
+ * Aggregates average bias per label and overlays labeled dots at each score level.
+ * Assumes `row.bias` is a dictionary of label: probability values.
+ *
+ * @param {Object} layout - Plotly layout object
+ * @param {Array} data - Reddit comment data
+ */
+function computeBiasDots(layout, data) {
+  const labelTotals = {};
+  let count = 0;
+
+  for (let row of data) {
+    const bias = row.bias;
+    if (bias && typeof bias === "object") {
+      for (const [label, value] of Object.entries(bias)) {
+        labelTotals[label] = (labelTotals[label] || 0) + value;
+      }
+      count += 1;
+    }
+  }
+
+  const labelAverages = {};
+  for (const [label, total] of Object.entries(labelTotals)) {
+    labelAverages[label] = total / count;
+  }
+
+  const sortedLabels = Object.keys(labelAverages).sort((a, b) => labelAverages[b] - labelAverages[a]);
+
+  layout.shapes = []; // No lines — only labeled points
+
+  layout.annotations.push(
+    ...sortedLabels.map((label) => ({
+      x: 0.5,
+      y: Math.min(labelAverages[label], 1),
+      text: label,
+      showarrow: false,
+      xref: "paper", yref: "paper",
+      font: { size: 10, color: "purple" },
+      xanchor: "left"
+    }))
+  );
+}
+
 
 /**
  * Renders a bar chart showing the number of comments per OC bin,
