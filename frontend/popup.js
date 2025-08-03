@@ -86,9 +86,9 @@ chrome.storage.local.get("reddit_url", (result) => {
 function renderSentimentLegend(data) {
   const gradientTrace = {
     type: "heatmap",
-    z: Array.from({ length: 201 }, (_, i) => [-1 + i * 0.01]), // vertical orientation
+    z: Array.from({ length: 101 }, (_, i) => [i / 100]), // vertical orientation
     x: [0],  // dummy single column
-    y: Array.from({ length: 201 }, (_, i) => -1 + i * 0.01),
+    y: Array.from({ length: 101 }, (_, i) => i / 100),
     colorscale: [
       [0.0, "red"],
       [0.5, "yellow"],
@@ -98,21 +98,34 @@ function renderSentimentLegend(data) {
     hoverinfo: "none"
   };
 
-  const layout = {
-    xaxis: { visible: false },
-    yaxis: { visible: false },
-    margin: { t: 30, b: 30, l: 30, r: 30 },
-    height: 300,
-    width: 100,
-    annotations: [
-      { x: 0, y: -1.06, text: "Negative", showarrow: false, xref: "x", yref: "y", font: { size: 12 } },
-      { x: 0, y: 1.07, text: "Positive", showarrow: false, xref: "x", yref: "y", font: { size: 12 } }
-    ]
-  };
+  const layout = getLegendLayout();
 
   renderInsights(layout, data, 'sentiment'); // this will still work fine
   document.getElementById("legend-status").textContent = ""; // clear it before rendering
+    layout.annotations.push(
+    {
+      x: 0.5,
+      y: 0,
+      xref: "paper",
+      yref: "y",
+      text: "Negative",
+      showarrow: false,
+      xanchor: "center",
+      font: { size: 10, color: "black" }
+    },
+    {
+      x: 0.5,
+      y: 1,
+      xref: "paper",
+      yref: "y",
+      text: "Positive",
+      showarrow: false,
+      xanchor: "center",
+      font: { size: 10, color: "black" }
+    }
+  );
   Plotly.newPlot("legend-container", [gradientTrace], layout, {
+    responsive: false,
     displayModeBar: false,
     staticPlot: true
   });
@@ -140,22 +153,34 @@ function renderBiasLegend(data) {
     hoverinfo: "none"
   };
 
-  const layout = {
-    xaxis: { visible: false },
-    yaxis: {
-      visible: false,
-      range: [0, 1]},
-    margin: { t: 30, b: 30, l: 30, r: 30 },
-    height: 300,
-    width: 100,
-    annotations: [
-      { x: 0, y: 0, text: "Low Bias", showarrow: false, xref: "x", yref: "y" },
-      { x: 0, y: 1, text: "High Bias", showarrow: false, xref: "x", yref: "y" }
-    ]
-  };
+  const layout = getLegendLayout();
 
   renderInsights(layout, data, 'bias');
+  layout.annotations.push(
+    {
+      x: 0.5,
+      y: 0,
+      xref: "paper",
+      yref: "y",
+      text: "Low Bias",
+      showarrow: false,
+      xanchor: "center",
+      font: { size: 10, color: "black" }
+    },
+    {
+      x: 0.5,
+      y: 1,
+      xref: "paper",
+      yref: "y",
+      text: "High Bias",
+      showarrow: false,
+      xanchor: "center",
+      font: { size: 10, color: "black" }
+    }
+  );
+
   Plotly.newPlot("bias-legend-container", [gradientTrace], layout, {
+    responsive: false,
     displayModeBar: false,
     staticPlot: true
   });
@@ -228,7 +253,7 @@ function computeSentimentLines(layout, data) {
   layout.shapes = [
     {
       type: "line",
-      x0: 0, x1: 0.58,
+      x0: 0, x1: 1,
       y0: avgScore, y1: avgScore,
       xref: "paper", yref: "paper",
       line: { color: "pink", width: 2 },
@@ -236,7 +261,7 @@ function computeSentimentLines(layout, data) {
     },
     {
       type: "line",
-      x0: 0, x1: 0.58,
+      x0: 0, x1: 1,
       y0: opScore, y1: opScore,
       xref: "paper", yref: "paper",
       line: { color: "cyan", width: 2 },
@@ -246,7 +271,7 @@ function computeSentimentLines(layout, data) {
 
   layout.annotations.push(
     {
-      x: xPosition,
+      x: xPosition + 0.5,
       y: avgScore,
       text: `Avg`,
       showarrow: false,
@@ -256,13 +281,13 @@ function computeSentimentLines(layout, data) {
       layer: "above"
     },
     {
-      x: xPosition,
-      y: opScore,
+      x: xPosition - .5,
+      y: opScore + .035,
       text: `OP`,
       showarrow: false,
       xref: "paper", yref: "paper",
       font: { size: 11, color: "cyan" },
-      xanchor: "left",
+      xanchor: "right",
       layer: "above"
     }
   );
@@ -314,7 +339,7 @@ function computeBiasDots(layout, data) {
     layout.shapes.push({
       type: "circle",
       xref: "x", yref: "y",
-      x0: 0.0, x1: 0.05,
+      x0: -0.03, x1: 0.03,
       y0: squashed - 0.005, y1: squashed + 0.005,
       fillcolor: "red",
       line: { width: 0 },
@@ -322,17 +347,18 @@ function computeBiasDots(layout, data) {
     });
 
     layout.annotations.push({
-      x: 0.52,
+      x: 1.02,
       y: squashed,
       text: label,
       showarrow: false,
-      xref: "x", yref: "y",
+      xref: "paper",
+      yref: "y",
       font: { size: 10, color: "purple" },
       xanchor: "left",
       layer: "above"
     });
-
   }
+
 }
 
 
@@ -486,5 +512,25 @@ function filterValidHierarchy(data) {
   const validIds = new Set(data.map(r => r.id));
   return data.filter(r => r.parent === "" || validIds.has(r.parent));
 }
+
+function getLegendLayout() {
+  return {
+    xaxis: {
+      visible: false,
+      constrain: 'domain'
+    },
+    yaxis: {
+      visible: false,
+      range: [0, 1]
+    },
+    margin: { t: 30, b: 30, l: 30, r: 30 },
+    height: 300,
+    width: 100,
+    annotations: [],
+    shapes: []
+  };
+}
+
+
 
 
