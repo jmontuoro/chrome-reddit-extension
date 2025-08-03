@@ -111,27 +111,28 @@ function renderSentimentLegend(data) {
   renderInsights(layout, data, 'sentiment'); // this will still work fine
   document.getElementById("legend-status").textContent = ""; // clear it before rendering
     layout.annotations.push(
-    {
-      x: 0.5,
-      y: 0,
-      xref: "paper",
-      yref: "y",
-      text: "Negative",
-      showarrow: false,
-      xanchor: "center",
-      font: { size: 12, color: "black" }
-    },
-    {
-      x: 0.5,
-      y: 1,
-      xref: "paper",
-      yref: "y",
-      text: "Positive",
-      showarrow: false,
-      xanchor: "center",
-      font: { size: 12, color: "black" }
-    }
-  );
+      {
+        x: 0.5,
+        y: -0.07, // below the chart
+        xref: "paper",
+        yref: "paper",
+        text: "Negative",
+        showarrow: false,
+        xanchor: "center",
+        font: { size: 12, color: "black" }
+      },
+      {
+        x: 0.5,
+        y: 1.07, // above the chart
+        xref: "paper",
+        yref: "paper",
+        text: "Positive",
+        showarrow: false,
+        xanchor: "center",
+        font: { size: 12, color: "black" }
+      }
+    );
+
   Plotly.newPlot("legend-container", [gradientTrace], layout, {
     responsive: false,
     displayModeBar: false,
@@ -152,24 +153,24 @@ function renderBiasLegend(data) {
     type: "heatmap",
     z: Array.from({ length: 201 }, (_, i) => [-1 + i * 0.01]),
     x: [0],
-    y: Array.from({ length: 201 }, (_, i) => i * 0.01),
+    y: Array.from({ length: 201 }, (_, i) => -1 + i * 0.01),
     colorscale: [
-      [0.0, "lightblue"],
-      [1.0, "purple"]
+      [0.0, "blue"],
+      [1.0, "red"]
     ],
     showscale: false,
     hoverinfo: "none"
   };
 
-  const layout = getLegendLayout();
+  const layout = getLegendLayout([-1,1]);
 
   renderInsights(layout, data, 'bias');
   layout.annotations.push(
     {
       x: 0.5,
-      y: 0,
+      y: -0.07,
       xref: "paper",
-      yref: "y",
+      yref: "paper",
       text: "Low Bias",
       showarrow: false,
       xanchor: "center",
@@ -177,9 +178,9 @@ function renderBiasLegend(data) {
     },
     {
       x: 0.5,
-      y: 1,
+      y: 1.07,
       xref: "paper",
-      yref: "y",
+      yref: "paper",
       text: "High Bias",
       showarrow: false,
       xanchor: "center",
@@ -301,15 +302,6 @@ function computeSentimentLines(layout, data) {
   );
 }
 
-function squashToCenter(value, strength = 0.5) {
-  // Compresses value toward 0.5. Range-preserving.
-  return 0.5 + (value - 0.5) * strength;
-}
-
-
-
-
-
 /**
  * Aggregates average bias per label and overlays labeled dots at each score level.
  * Assumes `row.bias` is a dictionary of label: probability values.
@@ -342,33 +334,31 @@ function computeBiasDots(layout, data) {
 
   for (const label of sortedLabels) {
     const original = labelAverages[label];
-    const squashed = squashToCenter(original);
 
     layout.shapes.push({
       type: "circle",
       xref: "x", yref: "y",
       x0: -0.03, x1: 0.03,
-      y0: squashed - 0.005, y1: squashed + 0.005,
+      y0: original - 0.005, y1: original + 0.005,
       fillcolor: "red",
       line: { width: 0 },
       layer: "above"
     });
 
     layout.annotations.push({
-      x: 1.02,
-      y: squashed,
+      x: 0,
+      y: original,
       text: label,
       showarrow: false,
       xref: "paper",
       yref: "y",
       font: { size: 10, color: "purple" },
-      xanchor: "left",
+      xanchor: "right",
       layer: "above"
     });
   }
 
 }
-
 
 
 
@@ -521,7 +511,7 @@ function filterValidHierarchy(data) {
   return data.filter(r => r.parent === "" || validIds.has(r.parent));
 }
 
-function getLegendLayout() {
+function getLegendLayout(yRange = [0, 1]) {
   return {
     xaxis: {
       visible: false,
@@ -529,7 +519,7 @@ function getLegendLayout() {
     },
     yaxis: {
       visible: false,
-      range: [0, 1]
+      range: yRange
     },
     margin: { t: 30, b: 30, l: 30, r: 30 },
     height: 300,
@@ -538,6 +528,7 @@ function getLegendLayout() {
     shapes: []
   };
 }
+
 
 
 
