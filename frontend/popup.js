@@ -1,33 +1,41 @@
-// DOM containers
+// ==== DOM REFERENCES ====
 const barContainer = document.getElementById("graph-container");
 const sunburstContainer = document.getElementById("sunburst-container");
 const legendContainer = document.getElementById("legend-container");
 const toggleButton = document.getElementById("expand-window");
 const advancedVisuals = document.querySelector(".advanced-visuals");
+const legendHeader = document.getElementById("legend-header");
 
-// Check if this is the popup window (opened via `chrome.windows.create(...)`)
+// ==== STATE ====
 const isInPopupWindow = window.outerWidth >= 800 && window.outerHeight >= 600;
 
-// Hide or show advanced visuals and toggle button accordingly
-if (isInPopupWindow) {
-  toggleButton.style.display = "none"; // Hide the "Open in Larger Window" button
-  advancedVisuals.style.display = "block";
-  legendContainer.style.display = 'none'; // hide sentiment legend in window
-  document.getElementById("legend-header").style.display = 'none'; //Hide heading + loading
+// ==== INITIALIZATION ====
+function setupUIBasedOnContext() {
+  if (isInPopupWindow) {
+    toggleButton.style.display = "none";
+    advancedVisuals.style.display = "block";
+    legendContainer.style.display = 'none';
+    legendHeader.style.display = 'none';
+  } else {
+    advancedVisuals.style.display = "none";
+    toggleButton.addEventListener("click", openInLargerWindow);
+  }
+}
 
-} else {
-  advancedVisuals.style.display = "none";
-  toggleButton.addEventListener("click", () => {
-    chrome.windows.create({
-      url: chrome.runtime.getURL("popup.html"),
-      type: "popup",
-      width: 800,
-      height: 700,
-      top: 150,
-      left: 200
-    });
+function openInLargerWindow() {
+  chrome.windows.create({
+    url: chrome.runtime.getURL("popup.html"),
+    type: "popup",
+    width: 800,
+    height: 600
   });
 }
+
+// ==== MAIN ====
+document.addEventListener("DOMContentLoaded", () => {
+  setupUIBasedOnContext();
+});
+
 
 
 // Load and render Reddit sentiment data
@@ -111,7 +119,7 @@ function renderSentimentLegend(data) {
       text: "Negative",
       showarrow: false,
       xanchor: "center",
-      font: { size: 10, color: "black" }
+      font: { size: 12, color: "black" }
     },
     {
       x: 0.5,
@@ -121,7 +129,7 @@ function renderSentimentLegend(data) {
       text: "Positive",
       showarrow: false,
       xanchor: "center",
-      font: { size: 10, color: "black" }
+      font: { size: 12, color: "black" }
     }
   );
   Plotly.newPlot("legend-container", [gradientTrace], layout, {
@@ -165,7 +173,7 @@ function renderBiasLegend(data) {
       text: "Low Bias",
       showarrow: false,
       xanchor: "center",
-      font: { size: 10, color: "black" }
+      font: { size: 12, color: "black" }
     },
     {
       x: 0.5,
@@ -175,7 +183,7 @@ function renderBiasLegend(data) {
       text: "High Bias",
       showarrow: false,
       xanchor: "center",
-      font: { size: 10, color: "black" }
+      font: { size: 12, color: "black" }
     }
   );
 
