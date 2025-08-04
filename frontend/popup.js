@@ -144,9 +144,11 @@ function renderSentimentLegend(data) {
   });
 }
 
+
 /**
- * Renders a vertical bias scale legend using a Plotly heatmap,
- * with dynamic color scaling based on actual bias values.
+ * Renders a vertical bias scale legend using a percentile-based approach.
+ * The 90th percentile of bias values appears at 80% of the chart height,
+ * preventing extreme values from dominating the scale.
  *
  * @param {Array} data - Optional comment data array.
  */
@@ -170,66 +172,70 @@ function renderBiasLegend(data) {
     Object.entries(labelTotals).map(([label, total]) => [label, total / count])
   );
 
-  const logMin = logBias(1e-4);
-  const logMax = Math.max(...Object.values(labelAverages).map(logBias));
+  // === Step 2: Calculate percentile-based scale ===
+  const biasValues = Object.values(labelAverages).sort((a, b) => a - b);
+  const maxBias = Math.max(...biasValues);
   
-  // === NEW: Calculate actual bias range for dynamic coloring ===
-  const actualBiasValues = Object.values(labelAverages);
-  const minBias = Math.min(...actualBiasValues);
-  const maxBias = Math.max(...actualBiasValues);
+  // Calculate 90th percentile (or use max if we have fewer than 10 values)
+  const percentileIndex = Math.floor(biasValues.length * 0.9);
+  const percentile90 = biasValues.length > 5 ? biasValues[percentileIndex] : maxBias;
   
-  // Define color thresholds (you can adjust these based on your needs)
-  const lowThreshold = 0.01;    // Below this = light blue
-  const mediumThreshold = 0.1;  // Above this = light red  
-  const highThreshold = 0.5;    // Above this = red
+  // Set the scale so that 90th percentile appears at 80% of the chart height
+  const CHART_POSITION_FOR_P90 = 0.65;
+  const scaleMax = percentile90 / CHART_POSITION_FOR_P90;
   
-  // Create dynamic color scale based on actual data range
-  function getDynamicColorScale(maxValue) {
-    if (maxValue <= lowThreshold) {
-      // All values are low - use blue to light blue
+  const minBias = 1e-4;
+  const logMin = logBias(minBias);
+  const logMax = logBias(scaleMax);
+
+  // === Step 3: Determine dynamic color scale based on percentile90 ===
+  const lowThreshold = 0.01;
+  const mediumThreshold = 0.1; 
+  const highThreshold = 0.5;
+  
+  function getDynamicColorScale(p90Value) {
+    if (p90Value <= lowThreshold) {
       return [
         [0.0, "lightblue"],
         [1.0, "#87CEEB"] // slightly darker light blue
       ];
-    } else if (maxValue <= mediumThreshold) {
-      // Values are low to medium - use blue to light orange
+    } else if (p90Value <= mediumThreshold) {
       return [
         [0.0, "lightblue"],
-        [0.7, "#FFE4B5"], // light peach
+        [0.7, "#E0F6FF"], // very light blue
+        [0.85, "#FFE4B5"], // light peach
         [1.0, "#FFA07A"]  // light salmon
       ];
-    } else if (maxValue <= highThreshold) {
-      // Values are medium to high - use blue to orange to light red
+    } else if (p90Value <= highThreshold) {
       return [
         [0.0, "lightblue"],
-        [0.5, "#FFE4B5"], // light peach
-        [0.8, "#FFA07A"], // light salmon
+        [0.5, "#E0F6FF"], // very light blue
+        [0.7, "#FFE4B5"], // light peach
+        [0.85, "#FFA07A"], // light salmon
         [1.0, "#FF6347"]  // tomato (light red)
       ];
     } else {
-      // Values are high - use full range to red
       return [
         [0.0, "lightblue"],
-        [0.3, "#FFE4B5"], // light peach
-        [0.6, "#FFA07A"], // light salmon
-        [0.8, "#FF6347"], // tomato
+        [0.3, "#E0F6FF"], // very light blue
+        [0.5, "#FFE4B5"], // light peach
+        [0.7, "#FFA07A"], // light salmon
+        [0.85, "#FF6347"], // tomato
         [1.0, "red"]
       ];
     }
   }
 
-  // === Step 2: Build vertical heatmap with dynamic colors ===
+  // === Step 4: Build vertical heatmap ===
   const ySteps = 201;
   const y = Array.from({ length: ySteps }, (_, i) =>
     logMin + (i / (ySteps - 1)) * (logMax - logMin)
   );
   
-  // Map each y position to its corresponding bias value for color calculation
   const zVals = y.map(logY => {
-    // Convert log value back to linear bias value
     const biasValue = Math.pow(10, logY) - 1e-4;
-    // Normalize based on actual data range (0 to maxBias)
-    const normalizedValue = Math.min(biasValue / Math.max(maxBias, lowThreshold), 1);
+    // Normalize based on our calculated scale maximum
+    const normalizedValue = Math.min(biasValue / scaleMax, 1);
     return [normalizedValue];
   });
 
@@ -238,7 +244,7 @@ function renderBiasLegend(data) {
     z: zVals,
     x: [0],
     y: y,
-    colorscale: getDynamicColorScale(maxBias),
+    colorscale: getDynamicColorScale(percentile90),
     zmin: 0,
     zmax: 1,
     autocolorscale: false,
@@ -246,28 +252,29 @@ function renderBiasLegend(data) {
     hoverinfo: "none"
   };
 
-  // === Step 3: Set up layout ===
+  // === Step 5: Set up layout ===
   const layout = getLegendLayout([0, 1]);
   layout.yaxis = {
     range: [logMin, logMax],
-    tickvals: [0, 0.25, 0.5, 0.75, 1].map(f => logMin + f * (logMax - logMin)),
-    ticktext: [0, 0.25, 0.5, 0.75, 1].map(f =>
-      `10^${(logMin + f * (logMax - logMin)).toFixed(1)}`
-    ),
+    tickvals: [0, 0.2, 0.4, 0.6, 0.8, 1.0].map(f => logMin + f * (logMax - logMin)),
+    ticktext: [0, 0.2, 0.4, 0.6, 0.8, 1.0].map(f => {
+      const logVal = logMin + f * (logMax - logMin);
+      return `10^${logVal.toFixed(1)}`;
+    }),
     side: 'right',
     showgrid: false,
     tickfont: { size: 7 },
     showticklabels: true
   };
 
-  // Dynamic label colors based on max bias
-  const highBiasColor = maxBias <= lowThreshold ? "#4682B4" : 
-                       maxBias <= mediumThreshold ? "#FFA07A" : 
-                       maxBias <= highThreshold ? "#FF6347" : "red";
+  // Dynamic labels based on percentile90
+  const highBiasColor = percentile90 <= lowThreshold ? "#4682B4" : 
+                       percentile90 <= mediumThreshold ? "#FFA07A" : 
+                       percentile90 <= highThreshold ? "#FF6347" : "red";
   
-  const highBiasText = maxBias <= lowThreshold ? "Low Bias" :
-                      maxBias <= mediumThreshold ? "Med Bias" :
-                      "High Bias";
+  const highBiasText = percentile90 <= lowThreshold ? "Low Range" :
+                      percentile90 <= mediumThreshold ? "Med Range" :
+                      "High Range";
 
   layout.annotations = [
     {
@@ -292,8 +299,7 @@ function renderBiasLegend(data) {
     }
   ];
 
-  // === Step 4: Add bias dots and labels ===
-  layout.shapes = [];
+  // === Step 6: Add bias dots and labels ===
   for (const [label, avg] of Object.entries(labelAverages)) {
     const yPos = logBias(avg);
 
@@ -305,7 +311,7 @@ function renderBiasLegend(data) {
       x1: 0.52,
       y0: yPos - 0.005,
       y1: yPos + 0.005,
-      fillcolor: "purple",
+      fillcolor: avg > scaleMax ? "orange" : "purple", // Highlight values above scale
       line: { width: 0 },
       layer: "above"
     });
@@ -317,7 +323,10 @@ function renderBiasLegend(data) {
       showarrow: false,
       xref: "paper",
       yref: "y",
-      font: { size: 10, color: "purple" },
+      font: { 
+        size: 10, 
+        color: avg > scaleMax ? "orange" : "purple" // Different color for out-of-range values
+      },
       xanchor: "right",
       textangle: -45,
       layer: "above"
@@ -326,7 +335,7 @@ function renderBiasLegend(data) {
 
   layout.autosize = true;
 
-  // === Step 5: Render plot ===
+  // === Step 7: Render plot ===
   Plotly.newPlot("bias-legend-container", [gradientTrace], layout, {
     responsive: true,
     displayModeBar: false,
