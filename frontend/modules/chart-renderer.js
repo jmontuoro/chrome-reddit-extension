@@ -19,6 +19,9 @@ export class ChartRenderer {
     this.addSentimentInsights(layout, data);
     this.addSentimentLabels(layout);
 
+    // Clear loading text
+    document.getElementById("legend-status").textContent = "";
+
     Plotly.newPlot(this.containers.legend, [trace], layout, {
       responsive: false,
       displayModeBar: false,

@@ -44,20 +44,33 @@ export class UIManager {
 
   showInvalidThreadMessage() {
     this.clearContainers();
-    this.elements.legendContainer.innerHTML = `
-      <div style="text-align: center; padding: 1em;">
-        <img src="images/comment-icon.png" alt="comment icon" 
-             style="width: 80px; opacity: 1; margin-bottom: 10px;" />
-        <p style="font-size: 14px; color: gray; line-height: 1.4;">
-          This is not a Reddit thread page.<br>
-          Navigate to a post and click its <strong>comments</strong> button,<br>
-          then reopen the extension.
-        </p>
-      </div>
-    `;
+    
+    // Clear loading text
+    const legendStatus = document.getElementById("legend-status");
+    if (legendStatus) legendStatus.textContent = "";
+    
+    // Show message in the legend wrapper (spans both containers)
+    const legendWrapper = document.getElementById("legend-wrapper");
+    if (legendWrapper) {
+      legendWrapper.innerHTML = `
+        <div style="text-align: center; padding: 1em; width: 100%;">
+          <img src="images/comment-icon.png" alt="comment icon" 
+               style="width: 80px; opacity: 1; margin-bottom: 10px;" />
+          <p style="font-size: 14px; color: gray; line-height: 1.4;">
+            This is not a Reddit thread page.<br>
+            Navigate to a post and click its <strong>comments</strong> button,<br>
+            then reopen the extension.
+          </p>
+        </div>
+      `;
+    }
   }
 
   showError(message) {
+    // Clear loading text
+    const legendStatus = document.getElementById("legend-status");
+    if (legendStatus) legendStatus.textContent = "";
+    
     this.elements.barContainer.textContent = `Error loading data: ${message}`;
     this.elements.sunburstContainer.textContent = `Error loading sunburst: ${message}`;
   }
