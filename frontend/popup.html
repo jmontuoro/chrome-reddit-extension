@@ -30,7 +30,11 @@
       color: gray;
       font-style: italic;
     }
-
+    #legend-wrapper {
+      display: flex;
+      justify-content: space-between;
+      gap: 4px; /* Reduce space between legends */
+    }
     #legend-container,
     #bias-legend-container,
     #graph-container,
@@ -54,7 +58,7 @@
   </div>
   
   <!-- Render sentiment legend and bias legend side by side-->
-  <div style="display: flex; justify-content: space-evenly;">
+  <div id="legend-wrapper">
     <div id="legend-container"></div> 
     <div id="bias-legend-container"></div>
   </div>
