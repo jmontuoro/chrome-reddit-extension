@@ -253,21 +253,22 @@ function renderBiasLegend(data) {
       x1: 0.52,
       y0: yPos - 0.005,
       y1: yPos + 0.005,
-      fillcolor: "red",
+      fillcolor: "purple",
       line: { width: 0 },
       layer: "above"
     });
 
     layout.annotations.push({
       x: 0,
-      y: yPos,
+      y: yPos - 0.04,
       text: label,
       showarrow: false,
       xref: "paper",
       yref: "y",
       font: { size: 10, color: "purple" },
       xanchor: "right",
-      layer: "above"
+      layer: "above",
+      textangle: -45
     });
   }
 
