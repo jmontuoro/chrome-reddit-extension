@@ -146,8 +146,7 @@ function renderSentimentLegend(data) {
 
 /**
  * Renders a vertical bias scale legend using a Plotly heatmap,
- * styled to match the sentiment scale. The scale runs from 
- * light blue (low bias) at the bottom to red (high bias) at the top.
+ * with dynamic color scaling based on actual bias values.
  *
  * @param {Array} data - Optional comment data array.
  */
@@ -173,24 +172,73 @@ function renderBiasLegend(data) {
 
   const logMin = logBias(1e-4);
   const logMax = Math.max(...Object.values(labelAverages).map(logBias));
-  const globalLogMax = logBias(1);
+  
+  // === NEW: Calculate actual bias range for dynamic coloring ===
+  const actualBiasValues = Object.values(labelAverages);
+  const minBias = Math.min(...actualBiasValues);
+  const maxBias = Math.max(...actualBiasValues);
+  
+  // Define color thresholds (you can adjust these based on your needs)
+  const lowThreshold = 0.01;    // Below this = light blue
+  const mediumThreshold = 0.1;  // Above this = light red  
+  const highThreshold = 0.5;    // Above this = red
+  
+  // Create dynamic color scale based on actual data range
+  function getDynamicColorScale(maxValue) {
+    if (maxValue <= lowThreshold) {
+      // All values are low - use blue to light blue
+      return [
+        [0.0, "lightblue"],
+        [1.0, "#87CEEB"] // slightly darker light blue
+      ];
+    } else if (maxValue <= mediumThreshold) {
+      // Values are low to medium - use blue to light orange
+      return [
+        [0.0, "lightblue"],
+        [0.7, "#FFE4B5"], // light peach
+        [1.0, "#FFA07A"]  // light salmon
+      ];
+    } else if (maxValue <= highThreshold) {
+      // Values are medium to high - use blue to orange to light red
+      return [
+        [0.0, "lightblue"],
+        [0.5, "#FFE4B5"], // light peach
+        [0.8, "#FFA07A"], // light salmon
+        [1.0, "#FF6347"]  // tomato (light red)
+      ];
+    } else {
+      // Values are high - use full range to red
+      return [
+        [0.0, "lightblue"],
+        [0.3, "#FFE4B5"], // light peach
+        [0.6, "#FFA07A"], // light salmon
+        [0.8, "#FF6347"], // tomato
+        [1.0, "red"]
+      ];
+    }
+  }
 
-  // === Step 2: Build vertical heatmap ===
+  // === Step 2: Build vertical heatmap with dynamic colors ===
   const ySteps = 201;
   const y = Array.from({ length: ySteps }, (_, i) =>
     logMin + (i / (ySteps - 1)) * (logMax - logMin)
   );
-  const zVals = y.map(v => [(v - logMin) / (globalLogMax - logMin)]);
+  
+  // Map each y position to its corresponding bias value for color calculation
+  const zVals = y.map(logY => {
+    // Convert log value back to linear bias value
+    const biasValue = Math.pow(10, logY) - 1e-4;
+    // Normalize based on actual data range (0 to maxBias)
+    const normalizedValue = Math.min(biasValue / Math.max(maxBias, lowThreshold), 1);
+    return [normalizedValue];
+  });
 
   const gradientTrace = {
     type: "heatmap",
     z: zVals,
     x: [0],
     y: y,
-    colorscale: [
-      [0.0, "lightblue"],
-      [1.0, "red"]
-    ],
+    colorscale: getDynamicColorScale(maxBias),
     zmin: 0,
     zmax: 1,
     autocolorscale: false,
@@ -204,7 +252,7 @@ function renderBiasLegend(data) {
     range: [logMin, logMax],
     tickvals: [0, 0.25, 0.5, 0.75, 1].map(f => logMin + f * (logMax - logMin)),
     ticktext: [0, 0.25, 0.5, 0.75, 1].map(f =>
-      `10^${(logMin + f * (logMax - logMin)).toFixed(2)}`
+      `10^${(logMin + f * (logMax - logMin)).toFixed(1)}`
     ),
     side: 'right',
     showgrid: false,
@@ -212,23 +260,32 @@ function renderBiasLegend(data) {
     showticklabels: true
   };
 
+  // Dynamic label colors based on max bias
+  const highBiasColor = maxBias <= lowThreshold ? "#4682B4" : 
+                       maxBias <= mediumThreshold ? "#FFA07A" : 
+                       maxBias <= highThreshold ? "#FF6347" : "red";
+  
+  const highBiasText = maxBias <= lowThreshold ? "Low Bias" :
+                      maxBias <= mediumThreshold ? "Med Bias" :
+                      "High Bias";
+
   layout.annotations = [
     {
       x: 0.5,
-      y: 1.05,
+      y: 1.07,
       xref: "paper",
       yref: "paper",
-      text: "High Bias",
+      text: highBiasText,
       showarrow: false,
       xanchor: "center",
-      font: { size: 12, color: "red" }
+      font: { size: 12, color: highBiasColor }
     },
     {
       x: 0.5,
-      y: -0.05,
+      y: -0.07,
       xref: "paper",
       yref: "paper",
-      text: "Low Bias",
+      text: "Min Bias",
       showarrow: false,
       xanchor: "center",
       font: { size: 12, color: "lightblue" }
