@@ -71,6 +71,8 @@ chrome.storage.local.get("reddit_url", (result) => {
     .then(data => {
       if (!isInPopupWindow) {
         renderSentimentLegend(data);
+      }
+      if (!isInPopupWindow) {
         renderBiasLegend(data);
       }
       if (isInPopupWindow) {
@@ -189,9 +191,9 @@ function renderBiasLegend(data) {
   );
 
   Plotly.newPlot("bias-legend-container", [gradientTrace], layout, {
-    responsive: false,
+    responsive: true,
     displayModeBar: false,
-    staticPlot: true
+    staticPlot: false
   });
 }
 
@@ -333,13 +335,16 @@ function computeBiasDots(layout, data) {
   layout.shapes = [];
 
   for (const label of sortedLabels) {
+    if (label.toLowerCase() === "none") continue;
     const original = labelAverages[label];
+    const normalized = 2 * original - 1;  // maps [0,1] to [-1,1]
+
 
     layout.shapes.push({
       type: "circle",
-      xref: "x", yref: "y",
-      x0: -0.03, x1: 0.03,
-      y0: original - 0.005, y1: original + 0.005,
+      xref: "x domain", yref: "y",
+      x0: .48, x1: .52,
+      y0: normalized - 0.005, y1: normalized + 0.005,
       fillcolor: "red",
       line: { width: 0 },
       layer: "above"
@@ -347,7 +352,7 @@ function computeBiasDots(layout, data) {
 
     layout.annotations.push({
       x: 0,
-      y: original,
+      y: normalized,
       text: label,
       showarrow: false,
       xref: "paper",
