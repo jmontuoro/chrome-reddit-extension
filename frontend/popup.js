@@ -97,7 +97,7 @@ function renderSentimentLegend(data) {
   const gradientTrace = {
     type: "heatmap",
     z: Array.from({ length: 101 }, (_, i) => [i / 100]), // vertical orientation
-    x: [0],  // dummy single column
+    x: [0],
     y: Array.from({ length: 101 }, (_, i) => i / 100),
     colorscale: [
       [0.0, "red"],
@@ -107,6 +107,8 @@ function renderSentimentLegend(data) {
     showscale: false,
     hoverinfo: "none"
   };
+
+
 
   const layout = getLegendLayout();
 
@@ -151,26 +153,74 @@ function renderSentimentLegend(data) {
  * @param {Array} data - Optional comment data array (not directly used, but kept for consistent API).
  */
 function renderBiasLegend(data) {
+  // Step 1: Compute average bias per label
+  const labelTotals = {};
+  let count = 0;
+
+  for (let row of data) {
+    const bias = row.bias;
+    if (bias && typeof bias === "object") {
+      for (const [label, value] of Object.entries(bias)) {
+        if (label.toLowerCase() === "none") continue;
+        labelTotals[label] = (labelTotals[label] || 0) + value;
+      }
+      count += 1;
+    }
+  }
+
+  const labelAverages = Object.fromEntries(
+    Object.entries(labelTotals).map(([label, total]) => [label, total / count])
+  );
+
+  const maxBias = Math.max(...Object.values(labelAverages), 1e-4); // avoid log(0)
+  const logMax = logBias(maxBias);
+
+  // Step 2: Rescale for visual placement
+  function rescaleLogBias(value) {
+    const min = logBias(1e-4); // fixed baseline
+    const max = logBias(maxBias);
+    return (logBias(value) - min) / (max - min);
+  }
+
+  const scaledMax = rescaleLogBias(maxBias);
+
+  // Step 3: Build heatmap z and y data, truncated to scaledMax
+  const ySteps = 201;
+  const y = Array.from({ length: ySteps }, (_, i) => i / (ySteps - 1) * scaledMax);
+  const zVals = y.map(v => [v]); // match one-to-one for vertical coloring
+
   const gradientTrace = {
     type: "heatmap",
-    z: Array.from({ length: 201 }, (_, i) => [-1 + i * 0.01]),
+    z: zVals,
     x: [0],
-    y: Array.from({ length: 201 }, (_, i) => -1 + i * 0.01),
+    y: y,
     colorscale: [
       [0.0, "blue"],
       [1.0, "red"]
     ],
+    zmin: 0,
+    zmax: scaledMax,
     showscale: false,
     hoverinfo: "none"
   };
 
-  const layout = getLegendLayout([-1,1]);
+  // Step 4: Set up layout
+  const layout = getLegendLayout([0, 1]);
 
-  renderInsights(layout, data, 'bias');
+  layout.yaxis = {
+    range: [0, 1],
+    tickvals: [0, 0.25, 0.5, 0.75, 1],
+    ticktext: ["10^{-4}", "10^{-3}", "10^{-2}", "10^{-1}", "10^{0}"],
+    side: 'right',
+    showgrid: false,
+    tickfont: { size: 10 },
+    showticklabels: true
+  };
+
   layout.annotations.push(
     {
       x: 0.5,
-      y: -0.07,
+      y: 1.07,
       xref: "paper",
       yref: "paper",
       text: "Low Bias",
@@ -180,7 +230,7 @@ function renderBiasLegend(data) {
     },
     {
       x: 0.5,
-      y: 1.07,
+      y: -0.07,
       xref: "paper",
       yref: "paper",
       text: "High Bias",
@@ -190,6 +240,38 @@ function renderBiasLegend(data) {
     }
   );
 
+  // Step 5: Plot red bias dots
+  layout.shapes = [];
+  for (const [label, avg] of Object.entries(labelAverages)) {
+    const yPos = rescaleLogBias(avg);
+
+    layout.shapes.push({
+      type: "circle",
+      xref: "x domain",
+      yref: "y",
+      x0: 0.48,
+      x1: 0.52,
+      y0: yPos - 0.005,
+      y1: yPos + 0.005,
+      fillcolor: "red",
+      line: { width: 0 },
+      layer: "above"
+    });
+
+    layout.annotations.push({
+      x: 0,
+      y: yPos,
+      text: label,
+      showarrow: false,
+      xref: "paper",
+      yref: "y",
+      font: { size: 10, color: "purple" },
+      xanchor: "right",
+      layer: "above"
+    });
+  }
+
+  // Step 6: Plot it
   Plotly.newPlot("bias-legend-container", [gradientTrace], layout, {
     responsive: true,
     displayModeBar: false,
@@ -197,8 +279,9 @@ function renderBiasLegend(data) {
   });
 }
 
-
-
+function logBias(value) {
+  return Math.log10(value + 1e-4); // avoid log(0)
+}
 
 
 /**
@@ -238,8 +321,6 @@ function renderInsights(layout, data, scoreType = "sentiment") {
 
   if (scoreType === "sentiment") {
     computeSentimentLines(layout, data);
-  } else if (scoreType === "bias") {
-    computeBiasDots(layout, data);
   }
 }
 
@@ -302,67 +383,6 @@ function computeSentimentLines(layout, data) {
       layer: "above"
     }
   );
-}
-
-/**
- * Aggregates average bias per label and overlays labeled dots at each score level.
- * Assumes `row.bias` is a dictionary of label: probability values.
- *
- * @param {Object} layout - Plotly layout object
- * @param {Array} data - Reddit comment data
- */
-function computeBiasDots(layout, data) {
-  const labelTotals = {};
-  let count = 0;
-
-  for (let row of data) {
-    const bias = row.bias;
-    if (bias && typeof bias === "object") {
-      for (const [label, value] of Object.entries(bias)) {
-        labelTotals[label] = (labelTotals[label] || 0) + value;
-      }
-      count += 1;
-    }
-  }
-
-  const labelAverages = {};
-  for (const [label, total] of Object.entries(labelTotals)) {
-    labelAverages[label] = total / count;
-  }
-
-  const sortedLabels = Object.keys(labelAverages).sort((a, b) => labelAverages[b] - labelAverages[a]);
-
-  layout.shapes = [];
-
-  for (const label of sortedLabels) {
-    if (label.toLowerCase() === "none") continue;
-    const original = labelAverages[label];
-    const normalized = 2 * original - 1;  // maps [0,1] to [-1,1]
-
-
-    layout.shapes.push({
-      type: "circle",
-      xref: "x domain", yref: "y",
-      x0: .48, x1: .52,
-      y0: normalized - 0.005, y1: normalized + 0.005,
-      fillcolor: "red",
-      line: { width: 0 },
-      layer: "above"
-    });
-
-    layout.annotations.push({
-      x: 0,
-      y: normalized,
-      text: label,
-      showarrow: false,
-      xref: "paper",
-      yref: "y",
-      font: { size: 10, color: "purple" },
-      xanchor: "right",
-      layer: "above"
-    });
-  }
-
 }
 
 
