@@ -147,13 +147,12 @@ function renderSentimentLegend(data) {
 /**
  * Renders a vertical bias scale legend using a Plotly heatmap,
  * styled to match the sentiment scale. The scale runs from 
- * light blue (low bias) at the bottom to purple (high bias) at the top.
- * Also includes text annotations for "Low Bias" and "High Bias".
+ * light blue (low bias) at the bottom to red (high bias) at the top.
  *
- * @param {Array} data - Optional comment data array (not directly used, but kept for consistent API).
+ * @param {Array} data - Optional comment data array.
  */
 function renderBiasLegend(data) {
-  // Step 1: Compute average bias per label
+  // === Step 1: Compute average bias per label ===
   const labelTotals = {};
   let count = 0;
 
@@ -172,20 +171,16 @@ function renderBiasLegend(data) {
     Object.entries(labelTotals).map(([label, total]) => [label, total / count])
   );
 
-  const logMin = logBias(1e-4); // base for log scaling
-  const logMax = Math.max(...Object.values(labelAverages).map(logBias)); // top of scale
+  const logMin = logBias(1e-4);
+  const logMax = Math.max(...Object.values(labelAverages).map(logBias));
+  const globalLogMax = logBias(1);
 
-  // Step 2: Position dots using raw log scale (no normalization)
-  // function rescaleLogBias(value) {
-  //   return logBias(value);
-  // }
-
-  // Step 3: Build heatmap z and y data using log range
+  // === Step 2: Build vertical heatmap ===
   const ySteps = 201;
-  const y = Array.from({ length: ySteps }, (_, i) => 
+  const y = Array.from({ length: ySteps }, (_, i) =>
     logMin + (i / (ySteps - 1)) * (logMax - logMin)
   );
-  const zVals = y.map(v => [v]);
+  const zVals = y.map(v => [(v - logMin) / (globalLogMax - logMin)]);
 
   const gradientTrace = {
     type: "heatmap",
@@ -196,30 +191,28 @@ function renderBiasLegend(data) {
       [0.0, "lightblue"],
       [1.0, "red"]
     ],
-    zVals: y.map(v => [v]),
-    zmin: logMin,
-    zmax: logMax,
+    zmin: 0,
+    zmax: 1,
+    autocolorscale: false,
     showscale: false,
     hoverinfo: "none"
   };
 
-  // Step 4: Set up layout
+  // === Step 3: Set up layout ===
   const layout = getLegendLayout([0, 1]);
-
   layout.yaxis = {
     range: [logMin, logMax],
     tickvals: [0, 0.25, 0.5, 0.75, 1].map(f => logMin + f * (logMax - logMin)),
     ticktext: [0, 0.25, 0.5, 0.75, 1].map(f =>
-      `10^${(logMin + f * (logMax - logMin)).toFixed(1)}`
+      `10^${(logMin + f * (logMax - logMin)).toFixed(2)}`
     ),
     side: 'right',
     showgrid: false,
-    tickfont: { size: 10 },
+    tickfont: { size: 7 },
     showticklabels: true
   };
 
-
-  layout.annotations.push(
+  layout.annotations = [
     {
       x: 0.5,
       y: 1.05,
@@ -240,10 +233,9 @@ function renderBiasLegend(data) {
       xanchor: "center",
       font: { size: 12, color: "lightblue" }
     }
-  );
+  ];
 
-
-  // Step 5: Plot red bias dots
+  // === Step 4: Add bias dots and labels ===
   layout.shapes = [];
   for (const [label, avg] of Object.entries(labelAverages)) {
     const yPos = logBias(avg);
@@ -270,20 +262,22 @@ function renderBiasLegend(data) {
       yref: "y",
       font: { size: 10, color: "purple" },
       xanchor: "right",
-      layer: "above",
-      textangle: -45
+      textangle: -45,
+      layer: "above"
     });
   }
 
   layout.autosize = true;
 
-  // Step 6: Plot it
+  // === Step 5: Render plot ===
   Plotly.newPlot("bias-legend-container", [gradientTrace], layout, {
     responsive: true,
     displayModeBar: false,
     staticPlot: false
   });
 }
+
+
 
 function logBias(value) {
   return Math.log10(value + 1e-4); // avoid log(0)
