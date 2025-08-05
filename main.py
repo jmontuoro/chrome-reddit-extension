@@ -1,15 +1,14 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, make_response
 from flask_cors import CORS
 import asyncio
 import asyncpraw
 import os
 import logging
 import nest_asyncio
+import pandas as pd
 
 from reddit_analysis import load_and_prepare_reddit_df, add_sentiment_scores, add_bias_scores
 from model_loader import download_model_from_gcs
-
-#test push to gcp
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -22,7 +21,24 @@ nest_asyncio.apply()
 _bias_model_path = None
 
 app = Flask(__name__)
-CORS(app, origins=["*"])  # Enable Cross-Origin Resource Sharing for local frontend use
+
+# Chrome extension specific CORS configuration
+CORS(app, 
+     origins=["*"],
+     methods=["GET", "POST", "OPTIONS"],
+     allow_headers=["Content-Type"],
+     expose_headers=["*"],
+     supports_credentials=False)
+
+# Add explicit OPTIONS handler for preflight requests
+@app.before_request
+def handle_preflight():
+    if request.method == "OPTIONS":
+        response = make_response()
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        response.headers.add('Access-Control-Allow-Headers', "*")
+        response.headers.add('Access-Control-Allow-Methods', "*")
+        return response
 
 def validate_environment():
     """Validate required environment variables on startup."""
@@ -56,28 +72,13 @@ reddit = asyncpraw.Reddit(
     user_agent=os.getenv("REDDIT_USER_AGENT")
 )
 
-@app.route('/receive_url', methods=['POST'])
-def receive_url():
+# PARALLEL PROCESSING ENDPOINTS
+
+@app.route('/receive_url_fast', methods=['POST'])
+def receive_url_fast():
     """
-    Flask route to receive a Reddit thread URL via POST request,
-    scrape comments and metadata using AsyncPRAW, compute sentiment,
-    and return a list of processed comments.
-
-    Request JSON:
-        {
-            "url": "<Reddit thread URL>"
-        }
-
-    Response JSON:
-        {
-            "status": "success",
-            "data": [ ... list of comments with sentiment ... ]
-        }
-        or
-        {
-            "status": "error", 
-            "message": "<error message>"
-        }
+    Fast route that returns Reddit data with sentiment only.
+    Bias analysis happens in separate endpoint.
     """
     try:
         # Validate input
@@ -89,7 +90,65 @@ def receive_url():
         if not validate_reddit_url(url):
             return jsonify({"status": "error", "message": "Invalid Reddit URL"}), 400
 
-        # Process the request
+        # Process Reddit data and sentiment (fast operations)
+        loop = asyncio.get_event_loop()
+        df = loop.run_until_complete(load_and_prepare_reddit_df(url, reddit))
+        df = add_sentiment_scores(df)
+        
+        result = df.to_dict(orient='records')
+        logger.info(f"Fast processing completed for {len(result)} comments")
+        return jsonify({"status": "success", "data": result}), 200
+        
+    except Exception as e:
+        logger.error(f"Error in fast processing: {e}")
+        return jsonify({"status": "error", "message": "Failed to process Reddit thread"}), 500
+
+@app.route('/add_bias_analysis', methods=['POST'])
+def add_bias_analysis():
+    """
+    Separate route that adds bias analysis to existing comment data.
+    Takes comment data and returns it with bias scores added.
+    """
+    try:
+        data = request.get_json()
+        if not data or 'comments' not in data:
+            return jsonify({"status": "error", "message": "Comments data required"}), 400
+        
+        comments = data.get('comments')
+        
+        # Convert back to DataFrame for processing
+        df = pd.DataFrame(comments)
+        
+        # Add bias analysis (slow operation)
+        model_path = get_bias_model_path()
+        df = add_bias_scores(df, model_path=model_path)
+        
+        result = df.to_dict(orient='records')
+        logger.info(f"Bias analysis completed for {len(result)} comments")
+        return jsonify({"status": "success", "data": result}), 200
+        
+    except Exception as e:
+        logger.error(f"Error in bias analysis: {e}")
+        return jsonify({"status": "error", "message": "Failed to analyze bias"}), 500
+
+# ORIGINAL COMBINED ENDPOINT (for backward compatibility)
+@app.route('/receive_url', methods=['POST'])
+def receive_url():
+    """
+    Original endpoint - processes both sentiment and bias sequentially.
+    Kept for backward compatibility.
+    """
+    try:
+        # Validate input
+        data = request.get_json()
+        if not data or 'url' not in data:
+            return jsonify({"status": "error", "message": "URL is required"}), 400
+            
+        url = data.get('url')
+        if not validate_reddit_url(url):
+            return jsonify({"status": "error", "message": "Invalid Reddit URL"}), 400
+
+        # Process the request (full pipeline)
         loop = asyncio.get_event_loop()
         df = loop.run_until_complete(load_and_prepare_reddit_df(url, reddit))
         df = add_sentiment_scores(df)
@@ -109,6 +168,7 @@ def receive_url():
         logger.error(f"Error processing request: {e}")
         return jsonify({"status": "error", "message": "Failed to process Reddit thread"}), 500
 
+# HEALTH CHECK AND TESTING ENDPOINTS
 
 @app.route('/')
 def root():
@@ -164,96 +224,6 @@ def test_bias():
     except Exception as e:
         logger.error(f"Bias test failed: {e}")
         return jsonify({'error': str(e)}), 500
-        
-
-# Add these new routes to your main.py
-
-@app.route('/receive_url_fast', methods=['POST'])
-def receive_url_fast():
-    """
-    Fast route that returns Reddit data with sentiment only.
-    Bias analysis happens in separate endpoint.
-    """
-    try:
-        # Validate input (same as before)
-        data = request.get_json()
-        if not data or 'url' not in data:
-            return jsonify({"status": "error", "message": "URL is required"}), 400
-            
-        url = data.get('url')
-        if not validate_reddit_url(url):
-            return jsonify({"status": "error", "message": "Invalid Reddit URL"}), 400
-
-        # Process Reddit data and sentiment (fast operations)
-        loop = asyncio.get_event_loop()
-        df = loop.run_until_complete(load_and_prepare_reddit_df(url, reddit))
-        df = add_sentiment_scores(df)
-        
-        result = df.to_dict(orient='records')
-        logger.info(f"Fast processing completed for {len(result)} comments")
-        return jsonify({"status": "success", "data": result}), 200
-        
-    except Exception as e:
-        logger.error(f"Error in fast processing: {e}")
-        return jsonify({"status": "error", "message": "Failed to process Reddit thread"}), 500
-
-@app.route('/add_bias_analysis', methods=['POST'])
-def add_bias_analysis():
-    """
-    Separate route that adds bias analysis to existing comment data.
-    Takes comment data and returns it with bias scores added.
-    """
-    try:
-        data = request.get_json()
-        if not data or 'comments' not in data:
-            return jsonify({"status": "error", "message": "Comments data required"}), 400
-        
-        comments = data.get('comments')
-        
-        # Convert back to DataFrame for processing
-        df = pd.DataFrame(comments)
-        
-        # Add bias analysis (slow operation)
-        model_path = get_bias_model_path()
-        df = add_bias_scores(df, model_path=model_path)
-        
-        result = df.to_dict(orient='records')
-        logger.info(f"Bias analysis completed for {len(result)} comments")
-        return jsonify({"status": "success", "data": result}), 200
-        
-    except Exception as e:
-        logger.error(f"Error in bias analysis: {e}")
-        return jsonify({"status": "error", "message": "Failed to analyze bias"}), 500
-
-# Keep original endpoint for backward compatibility
-@app.route('/receive_url', methods=['POST'])
-def receive_url():
-    """
-    Original endpoint - now calls the new parallel approach internally
-    """
-    try:
-        # Get fast sentiment data first
-        sentiment_response = receive_url_fast()
-        if sentiment_response[1] != 200:  # Check status code
-            return sentiment_response
-        
-        sentiment_data = sentiment_response[0].get_json()['data']
-        
-        # Add bias analysis
-        bias_response = add_bias_analysis()
-        if bias_response[1] != 200:
-            # Return sentiment data even if bias fails
-            return jsonify({
-                "status": "partial_success", 
-                "data": sentiment_data,
-                "message": "Sentiment analysis completed, bias analysis failed"
-            }), 200
-        
-        return bias_response
-        
-    except Exception as e:
-        logger.error(f"Error in combined processing: {e}")
-        return jsonify({"status": "error", "message": "Failed to process request"}), 500
 
 if __name__ == '__main__':
     # Start Flask server with dynamic or fallback port
