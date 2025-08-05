@@ -1,0 +1,124 @@
+# .dockerignore
+# Optimized for the Reddit extension backend
+
+# Development files
+README.md
+LICENSE
+.gitignore
+.git/
+.github/
+
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.env
+.venv/
+venv/
+env/
+ENV/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.cursorignore
+.cursorindexingignore
+
+# Documentation and examples
+docs/
+examples/
+*.md
+!README.md
+
+# Test files
+tests/
+test_*.py
+*_test.py
+
+# Development tools
+.pre-commit-config.yaml
+pyproject.toml
+setup.cfg
+tox.ini
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Local model files (will be downloaded at runtime)
+bias_model/
+model_t2835ru3/
+*.safetensors
+*.bin
+*.pt
+*.pth
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Cloud build files (already in repo for deployment)
+# cloudbuild.yaml  # Keep this for Cloud Build
+
+# Frontend files (not needed in backend container)
+frontend/
+static/
+public/
+*.html
+*.css
+*.js
+*.json
+!package.json
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Configuration examples
+config.example.*
+.env.example
+
+# Jupyter notebooks
+*.ipynb
+.ipynb_checkpoints/
+
+# Docker files
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# CI/CD files
+.github/
+.gitlab-ci.yml
+.travis.yml
+Jenkinsfile
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Archive files
+*.zip
+*.tar.gz
+*.rar
+*.7z
