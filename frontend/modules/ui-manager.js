@@ -29,6 +29,7 @@ export class UIManager {
     this.elements.toggleButton.style.display = "none";
     this.elements.advancedVisuals.style.display = "block";
     this.elements.legendContainer.style.display = 'none';
+    this.elements.biasLegendContainer.style.display = 'none';
     this.elements.legendHeader.style.display = 'none';
   }
 
