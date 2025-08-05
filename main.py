@@ -22,7 +22,7 @@ nest_asyncio.apply()
 _bias_model_path = None
 
 app = Flask(__name__)
-CORS(app)  # Enable Cross-Origin Resource Sharing for local frontend use
+CORS(app, origins=["*"])  # Enable Cross-Origin Resource Sharing for local frontend use
 
 def validate_environment():
     """Validate required environment variables on startup."""

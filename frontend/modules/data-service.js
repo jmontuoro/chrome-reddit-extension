@@ -1,6 +1,6 @@
 export class DataService {
   constructor() {
-    this.backendUrl = 'https://your-backend-url.com'; // Update with your actual backend URL
+    this.backendUrl = 'https://reddit-extension-backend-541360204677.us-central1.run.app'; // Update with your actual backend URL
   }
 
   async getRedditUrl() {
