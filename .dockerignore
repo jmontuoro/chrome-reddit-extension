@@ -77,15 +77,25 @@ dist/
 # Cloud build files (already in repo for deployment)
 # cloudbuild.yaml  # Keep this for Cloud Build
 
-# Frontend files (not needed in backend container)
+# Frontend/Chrome extension files (not needed in backend container)
 frontend/
 static/
 public/
+modules/
 *.html
 *.css
 *.js
-*.json
-!package.json
+*.min.js
+manifest.json
+content.js
+popup.js
+popup.html
+
+# Keep Python and config files
+!*.py
+!requirements.txt
+!runtime.txt
+!cloudbuild.yaml
 
 # Database files
 *.db
