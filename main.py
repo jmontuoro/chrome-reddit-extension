@@ -9,6 +9,8 @@ import nest_asyncio
 from reddit_analysis import load_and_prepare_reddit_df, add_sentiment_scores, add_bias_scores
 from model_loader import download_model_from_gcs
 
+#test push to gcp
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
