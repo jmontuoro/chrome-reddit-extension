@@ -174,7 +174,7 @@ export class ChartRenderer {
       border: 1px solid #ddd;
       z-index: 1000;
     `;
-    notice.textContent = 'Loading bias highlighting...';
+    notice.textContent = 'Loading bias data...';
     
     // Make bar container relative for positioning
     this.containers.bar.style.position = 'relative';
