@@ -1,118 +1,95 @@
-// Updated popup.js - Main entry point with parallel rendering
-import { UIManager } from './modules/ui-manager.js';
+// popup.js - Main coordination script
 import { DataService } from './modules/data-service.js';
 import { ChartRenderer } from './modules/chart-renderer.js';
+import { UIManager } from './modules/ui-manager.js';
 
-class PopupApp {
+class PopupCoordinator {
   constructor() {
-    this.uiManager = new UIManager();
     this.dataService = new DataService();
     this.chartRenderer = new ChartRenderer();
-    this.sentimentDataReady = false;
-    this.biasDataReady = false;
+    this.uiManager = new UIManager();
   }
 
-  async init() {
+  async initialize() {
+    // Set up UI based on window type
     this.uiManager.setupUI();
-    await this.loadAndRenderDataParallel();
+    
+    // Get Reddit URL and validate
+    const { url, isValidThread } = await this.dataService.getRedditUrl();
+    
+    if (!isValidThread) {
+      this.uiManager.showInvalidThreadMessage();
+      return;
+    }
+
+    // Start parallel data processing
+    await this.processDataParallel(url);
   }
 
-  async loadAndRenderDataParallel() {
+  async processDataParallel(url) {
     try {
-      const { url, isValidThread } = await this.dataService.getRedditUrl();
-      
-      if (!isValidThread) {
-        this.uiManager.showInvalidThreadMessage();
-        return;
-      }
-
       // Show initial loading state
       this.uiManager.showLoadingState();
 
       // Fetch data with parallel processing
       await this.dataService.fetchDataParallel(
         url,
-        (sentimentData) => this.handleSentimentReady(sentimentData),
-        (biasData) => this.handleBiasReady(biasData)
+        (sentimentData) => this.onSentimentReady(sentimentData),
+        (biasData) => this.onBiasReady(biasData)
       );
 
     } catch (error) {
+      console.error('Error processing data:', error);
       this.uiManager.showError(error.message);
-      console.error('Error:', error);
     }
   }
 
-  handleSentimentReady(sentimentData) {
-    console.log('Sentiment data ready, rendering charts...');
+  onSentimentReady(sentimentData) {
+    /**
+     * Called when sentiment data is ready - render initial charts
+     */
+    console.log('Sentiment data ready, rendering initial charts...');
     
-    this.sentimentDataReady = true;
-    const isPopup = this.uiManager.isInPopupWindow;
+    // Update loading status
+    this.uiManager.hideChartLoading('sentiment');
+    this.uiManager.showChartProgress('bar', 'Rendering with sentiment...');
+    this.uiManager.showChartProgress('sunburst', 'Building hierarchy...');
+
+    // Render initial charts without bias data
+    this.chartRenderer.renderSentimentLegend(sentimentData);
     
-    // Render sentiment-dependent charts immediately
-    if (!isPopup) {
-      this.chartRenderer.renderSentimentLegend(sentimentData);
-      this.uiManager.updateLoadingStatus('Sentiment analysis complete! Loading bias analysis...');
-    } else {
-      this.chartRenderer.renderBarChart(sentimentData);
-      this.chartRenderer.renderSunburstChart(sentimentData, { biasDataAvailable: false });
-      this.uiManager.updateLoadingStatus('Sentiment charts ready! Processing bias data...');
-    }
+    // Render bar chart with notice that bias is loading
+    this.chartRenderer.renderBarChart(sentimentData, { biasDataAvailable: false });
+    
+    // Render sunburst chart with notice that bias is loading  
+    this.chartRenderer.renderSunburstChart(sentimentData, { biasDataAvailable: false });
+
+    // Hide individual loading indicators
+    this.uiManager.hideChartLoading('bar');
+    this.uiManager.hideChartLoading('sunburst');
   }
 
-  handleBiasReady(biasData) {
-    console.log('Bias data ready, updating charts...');
+  onBiasReady(biasData) {
+    /**
+     * Called when bias analysis is complete - update charts with bias features
+     */
+    console.log('Bias data ready, updating charts with bias features...');
     
-    this.biasDataReady = true;
-    const isPopup = this.uiManager.isInPopupWindow;
+    // Update loading status
+    this.uiManager.hideChartLoading('bias');
     
-    // Render bias-dependent charts and update existing ones
-    if (!isPopup) {
-      this.chartRenderer.renderBiasLegend(biasData);
-      this.uiManager.updateLoadingStatus('All analysis complete!');
-    } else {
-      // Update sunburst with bias data
-      this.chartRenderer.updateSunburstWithBias(biasData);
-      this.chartRenderer.renderBiasCharts(biasData); // Any additional bias-specific charts
-      this.uiManager.updateLoadingStatus('All visualizations ready!');
-    }
+    // Update all charts with bias data
+    this.chartRenderer.renderBiasCharts(biasData);
     
-    // Hide loading indicators
-    setTimeout(() => this.uiManager.hideLoadingIndicators(), 1000);
-  }
-
-  // Fallback method for backwards compatibility
-  async loadAndRenderData() {
-    try {
-      const { url, isValidThread } = await this.dataService.getRedditUrl();
-      
-      if (!isValidThread) {
-        this.uiManager.showInvalidThreadMessage();
-        return;
-      }
-
-      // Use original full data fetch method
-      const data = await this.dataService.fetchFullData(url);
-      this.renderCharts(data);
-    } catch (error) {
-      this.uiManager.showError(error.message);
-      console.error('Error:', error);
-    }
-  }
-
-  renderCharts(data) {
-    const isPopup = this.uiManager.isInPopupWindow;
+    // Clear all loading indicators
+    this.uiManager.hideLoadingIndicators();
     
-    if (!isPopup) {
-      this.chartRenderer.renderSentimentLegend(data);
-      this.chartRenderer.renderBiasLegend(data);
-    } else {
-      this.chartRenderer.renderBarChart(data);
-      this.chartRenderer.renderSunburstChart(data);
-    }
+    console.log('All charts updated with bias data!');
   }
 }
 
-// Initialize app when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
-  new PopupApp().init();
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', async () => {
+  const coordinator = new PopupCoordinator();
+  await coordinator.initialize();
 });

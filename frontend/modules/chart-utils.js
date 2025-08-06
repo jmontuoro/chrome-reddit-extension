@@ -12,8 +12,7 @@ export class ChartUtils {
     };
   }
 
-  // NEW: Helper method to format bias data for hover tooltips
-  // Matches the logic from key insights - shows highest bias category and value
+  // ENHANCED: Helper method to format bias data for hover tooltips
   formatBiasForHover(biasData) {
     if (!biasData || typeof biasData !== 'object') {
       return '<b>bias</b>: not available';
@@ -35,6 +34,64 @@ export class ChartUtils {
     const scientificStr = topBiasValue.toExponential(2);
     
     return `<b>bias</b>: ${topBiasType} (${scientificStr})`;
+  }
+
+  // NEW: Find the comment with highest bias across all data
+  findHighestBiasComment(data) {
+    let maxBiasValue = 0;
+    let maxBiasComment = null;
+    
+    for (const row of data) {
+      if (row.bias && typeof row.bias === 'object') {
+        const nonNoneBias = Object.entries(row.bias)
+          .filter(([key, value]) => key.toLowerCase() !== 'none')
+          .sort(([,a], [,b]) => b - a);
+        
+        if (nonNoneBias.length > 0) {
+          const [biasType, biasValue] = nonNoneBias[0];
+          if (biasValue > maxBiasValue) {
+            maxBiasValue = biasValue;
+            maxBiasComment = {
+              author: row.author || 'anonymous',
+              biasType: biasType,
+              biasValue: biasValue,
+              binId: row.oc_bin_id
+            };
+          }
+        }
+      }
+    }
+    
+    return maxBiasComment;
+  }
+
+  // NEW: Find comments with highest bias in each bin
+  findHighestBiasPerBin(data) {
+    const binBiasMap = {};
+    
+    for (const row of data) {
+      const bin = row.oc_bin_id || "Unbinned";
+      
+      if (row.bias && typeof row.bias === 'object') {
+        const nonNoneBias = Object.entries(row.bias)
+          .filter(([key, value]) => key.toLowerCase() !== 'none')
+          .sort(([,a], [,b]) => b - a);
+        
+        if (nonNoneBias.length > 0) {
+          const [biasType, biasValue] = nonNoneBias[0];
+          
+          if (!binBiasMap[bin] || biasValue > binBiasMap[bin].biasValue) {
+            binBiasMap[bin] = {
+              author: row.author || 'anonymous',
+              biasType: biasType,
+              biasValue: biasValue
+            };
+          }
+        }
+      }
+    }
+    
+    return binBiasMap;
   }
 
   // Sentiment chart utilities (unchanged)
@@ -184,7 +241,7 @@ export class ChartUtils {
     return { highBiasColor: "red", highBiasText: "High Range" };
   }
 
-  // Bar chart utilities - ENHANCED with bias in hovertips
+  // ENHANCED: Bar chart utilities with bias highlighting and improved hover
   summarizeCommentsByBin(data) {
     const summary = {};
 
@@ -193,6 +250,10 @@ export class ChartUtils {
     for (const row of data) {
       commentMap.set(row.id, row);
     }
+
+    // Find highest bias per bin and globally
+    const globalHighestBias = this.findHighestBiasComment(data);
+    const binHighestBias = this.findHighestBiasPerBin(data);
 
     for (const row of data) {
       const bin = row.oc_bin_id || "Unbinned";
@@ -205,10 +266,14 @@ export class ChartUtils {
           count: 0,
           totalSentiment: 0,
           oc_author: row.oc_author || row.author || "anonymous",
-          body: originalComment.body || row.body, // Use original comment's body
-          score: originalComment.score || row.score || 0, // Use original comment's score
+          body: originalComment.body || row.body,
+          score: originalComment.score || row.score || 0,
           is_op: false,
-          bias: originalComment.bias || null // Get bias from the original comment
+          bias: originalComment.bias || null,
+          // NEW: Add bias metadata for highlighting and hover
+          hasGlobalHighestBias: globalHighestBias && globalHighestBias.binId === bin,
+          globalHighestBiasInfo: globalHighestBias,
+          binHighestBiasInfo: binHighestBias[bin] || null
         };
       }
 
@@ -237,26 +302,51 @@ export class ChartUtils {
       hoverinfo: "skip",
       hovertemplate: "%{hovertext}<extra></extra>",
       marker: {
-        color: bins.map(bin => summary[bin].totalSentiment / summary[bin].count),
+        // ENHANCED: Blue highlight for bar with highest bias
+        color: bins.map(bin => {
+          if (summary[bin].hasGlobalHighestBias) {
+            return 'blue'; // Highlight the bin with highest bias
+          }
+          // Otherwise use sentiment coloring
+          return summary[bin].totalSentiment / summary[bin].count;
+        }),
         colorscale: this.colorScales.sentiment,
         cmin: -1,
         cmax: 1,
-        showscale: false
+        showscale: false,
+        // Add border for highlighted bar
+        line: {
+          color: bins.map(bin => summary[bin].hasGlobalHighestBias ? 'darkblue' : 'white'),
+          width: bins.map(bin => summary[bin].hasGlobalHighestBias ? 2 : 0.5)
+        }
       }
     };
   }
 
-  // ENHANCED: Bar chart hover text now includes bias information
+  // ENHANCED: Bar chart hover text with comprehensive bias information
   createBarHoverText(row) {
-    const biasText = this.formatBiasForHover(row.bias);
-    
-    return `
+    let hoverText = `
       <b>author</b>: ${row.oc_author}<br>
       <b>score</b>: ${row.score}<br>
       <b>body</b>: ${row.body.slice(0, 100)}...<br>
       <b>avg_sentiment</b>: ${(row.totalSentiment / row.count).toFixed(4)}<br>
-      ${biasText}
     `;
+
+    // Add bias information for this bin's original comment
+    const biasText = this.formatBiasForHover(row.bias);
+    hoverText += `${biasText}<br>`;
+
+    // Add information about highest bias in this bin (if different from original comment)
+    if (row.binHighestBiasInfo && row.binHighestBiasInfo.author !== row.oc_author) {
+      hoverText += `<b>highest bias in bin</b>: ${row.binHighestBiasInfo.author} (${row.binHighestBiasInfo.biasType}: ${row.binHighestBiasInfo.biasValue.toExponential(2)})<br>`;
+    }
+
+    // Add information about global highest bias (if this bin contains it)
+    if (row.hasGlobalHighestBias && row.globalHighestBiasInfo) {
+      hoverText += `<b>🔥 HIGHEST BIAS IN THREAD</b>: ${row.globalHighestBiasInfo.author} (${row.globalHighestBiasInfo.biasType}: ${row.globalHighestBiasInfo.biasValue.toExponential(2)})`;
+    }
+
+    return hoverText.trim();
   }
 
   // Sunburst chart utilities - ENHANCED with bias in hovertips

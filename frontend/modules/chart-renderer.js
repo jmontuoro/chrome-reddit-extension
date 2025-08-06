@@ -14,6 +14,7 @@ export class ChartRenderer {
     // Track current data for updates
     this.currentData = null;
     this.sunburstRendered = false;
+    this.barRendered = false;
   }
 
   renderSentimentLegend(data) {
@@ -47,7 +48,7 @@ export class ChartRenderer {
     });
   }
 
-  renderBarChart(data) {
+  renderBarChart(data, options = {}) {
     this.currentData = data; // Store for potential updates
     
     const summary = this.utils.summarizeCommentsByBin(data);
@@ -59,6 +60,13 @@ export class ChartRenderer {
       xaxis: { tickangle: -45 },
       margin: { t: 40, b: 80 }
     });
+    
+    this.barRendered = true;
+    
+    // If bias data isn't available yet, show a note
+    if (options.biasDataAvailable === false) {
+      this.showBarBiasNotice();
+    }
   }
 
   renderSunburstChart(data, options = {}) {
@@ -83,7 +91,31 @@ export class ChartRenderer {
     }
   }
 
-  // NEW METHODS FOR PARALLEL SUPPORT
+  // ENHANCED: Update bar chart with bias data
+  updateBarWithBias(biasData) {
+    /**
+     * Update existing bar chart with bias data
+     * Called when bias analysis completes after initial render
+     */
+    if (!this.barRendered) {
+      // If bar chart wasn't rendered yet, render it now with full data
+      this.renderBarChart(biasData);
+      return;
+    }
+
+    // Update the existing bar chart with new bias data
+    const summary = this.utils.summarizeCommentsByBin(biasData);
+    const trace = this.utils.createBarChartTrace(summary);
+
+    Plotly.react(this.containers.bar, [trace], {
+      height: 400,
+      xaxis: { tickangle: -45 },
+      margin: { t: 40, b: 80 }
+    });
+
+    // Remove any bias loading notice
+    this.hideBarBiasNotice();
+  }
 
   updateSunburstWithBias(biasData) {
     /**
@@ -114,9 +146,46 @@ export class ChartRenderer {
      * Render any additional bias-specific charts
      * Called when bias data becomes available
      */
-    // For now, this just ensures bias legend is rendered
-    // You can add more bias-specific visualizations here
+    // Update both advanced charts with bias data
+    this.updateBarWithBias(data);
+    this.updateSunburstWithBias(data);
     this.renderBiasLegend(data);
+  }
+
+  // NEW: Bar chart bias loading notice
+  showBarBiasNotice() {
+    /**
+     * Show a temporary notice that bias data is still loading for bar chart
+     */
+    const notice = document.createElement('div');
+    notice.id = 'bar-bias-notice';
+    notice.style.cssText = `
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(255, 255, 255, 0.9);
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      color: #666;
+      border: 1px solid #ddd;
+      z-index: 1000;
+    `;
+    notice.textContent = 'Loading bias highlighting...';
+    
+    // Make bar container relative for positioning
+    this.containers.bar.style.position = 'relative';
+    this.containers.bar.appendChild(notice);
+  }
+
+  hideBarBiasNotice() {
+    /**
+     * Remove the bias loading notice from bar chart
+     */
+    const notice = document.getElementById('bar-bias-notice');
+    if (notice) {
+      notice.remove();
+    }
   }
 
   showSunburstBiasNotice() {
@@ -154,8 +223,7 @@ export class ChartRenderer {
     }
   }
 
-  // HELPER METHODS FOR PROGRESSIVE UPDATES
-
+  // ENHANCED: Generic method to update chart data
   updateChartData(chartType, newData) {
     /**
      * Generic method to update chart data
@@ -164,7 +232,7 @@ export class ChartRenderer {
      */
     switch(chartType) {
       case 'bar':
-        this.renderBarChart(newData);
+        this.updateBarWithBias(newData);
         break;
       case 'sunburst':
         this.updateSunburstWithBias(newData);
