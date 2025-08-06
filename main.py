@@ -63,14 +63,14 @@ def get_bias_model_path():
     return _bias_model_path
 
 # Validate environment on startup
-validate_environment()
+#validate_environment()
 
 # Set up Reddit client from environment variables
-reddit = asyncpraw.Reddit(
-    client_id=os.getenv("REDDIT_CLIENT_ID"),
-    client_secret=os.getenv("REDDIT_CLIENT_SECRET"),
-    user_agent=os.getenv("REDDIT_USER_AGENT")
-)
+# reddit = asyncpraw.Reddit(
+#     client_id=os.getenv("REDDIT_CLIENT_ID"),
+#     client_secret=os.getenv("REDDIT_CLIENT_SECRET"),
+#     user_agent=os.getenv("REDDIT_USER_AGENT")
+# )
 
 # PARALLEL PROCESSING ENDPOINTS
 
