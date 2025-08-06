@@ -79,7 +79,7 @@ def extract_submission_metadata(submission, level=0):
         "level": level,
     }
 
-async def load_and_prepare_reddit_df(url: str, reddit_client=None, max_comments=1000):
+async def load_and_prepare_reddit_df(url: str, reddit_client=None, max_comments=2000):
     """Load Reddit data and prepare DataFrame."""
     if reddit_client is None:
         raise ValueError("Reddit client must be provided.")

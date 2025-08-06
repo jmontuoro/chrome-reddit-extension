@@ -119,7 +119,7 @@ def add_bias_analysis():
         if not data or 'comments' not in data:
             return jsonify({"status": "error", "message": "Comments data required"}), 400
         
-        comments = data.get('comments')[:50] #limit to 50 comments- bias analysis is slow.
+        comments = data.get('comments')[:60] #limit to 60 comments- bias analysis is slow.
         
         # Convert back to DataFrame for processing
         df = pd.DataFrame(comments)
