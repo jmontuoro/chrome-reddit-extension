@@ -23,12 +23,17 @@ _bias_model_path = None
 app = Flask(__name__)
 
 # Chrome extension specific CORS configuration
-CORS(app, 
-     origins=["*"],
+# SECURE VERSION:
+CORS(app,
+     origins=[
+         "chrome-extension://*", 
+         "https://www.reddit.com",  
+         "https://reddit.com"
+     ],
      methods=["GET", "POST", "OPTIONS"],
      allow_headers=["Content-Type"],
-     expose_headers=["*"],
-     supports_credentials=False)
+     supports_credentials=False
+)
 
 # Add explicit OPTIONS handler for preflight requests
 @app.before_request
