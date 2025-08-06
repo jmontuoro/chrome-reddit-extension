@@ -26,9 +26,8 @@ export class ChartRenderer {
     this.addSentimentInsights(layout, data);
     this.addSentimentLabels(layout);
 
-    // Clear loading text
-    const legendStatus = document.getElementById("legend-status");
-    if (legendStatus) legendStatus.textContent = "";
+    // Don't clear loading text here - let the UI manager handle it
+    // The legend status should show progress during parallel processing
 
     Plotly.newPlot(this.containers.legend, [trace], layout, {
       responsive: false,
@@ -91,7 +90,7 @@ export class ChartRenderer {
     }
   }
 
-  // ENHANCED: Update bar chart with bias data
+  // Update bar chart with bias data
   updateBarWithBias(biasData) {
     /**
      * Update existing bar chart with bias data
@@ -150,6 +149,10 @@ export class ChartRenderer {
     this.updateBarWithBias(data);
     this.updateSunburstWithBias(data);
     this.renderBiasLegend(data);
+    
+    // Clear loading text when bias processing is complete
+    const legendStatus = document.getElementById("legend-status");
+    if (legendStatus) legendStatus.textContent = "";
   }
 
   // NEW: Bar chart bias loading notice
@@ -223,7 +226,7 @@ export class ChartRenderer {
     }
   }
 
-  // ENHANCED: Generic method to update chart data
+
   updateChartData(chartType, newData) {
     /**
      * Generic method to update chart data
@@ -262,7 +265,6 @@ export class ChartRenderer {
     return this.currentData;
   }
 
-  // EXISTING METHODS (unchanged)
 
   addSentimentInsights(layout, data) {
     const { avgScore, opScore } = this.utils.calculateSentimentScores(data);
