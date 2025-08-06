@@ -12,7 +12,32 @@ export class ChartUtils {
     };
   }
 
-  // Sentiment chart utilities
+  // NEW: Helper method to format bias data for hover tooltips
+  // Matches the logic from key insights - shows highest bias category and value
+  formatBiasForHover(biasData) {
+    if (!biasData || typeof biasData !== 'object') {
+      return '<b>bias</b>: not available';
+    }
+
+    // Filter out 'none' category and find the highest bias
+    const nonNoneBias = Object.entries(biasData)
+      .filter(([key, value]) => key.toLowerCase() !== 'none')
+      .sort(([,a], [,b]) => b - a); // Sort by value descending
+
+    if (nonNoneBias.length === 0) {
+      return '<b>bias</b>: none detected';
+    }
+
+    // Get the highest bias category and value
+    const [topBiasType, topBiasValue] = nonNoneBias[0];
+    
+    // Always use scientific notation for consistency
+    const scientificStr = topBiasValue.toExponential(2);
+    
+    return `<b>bias</b>: ${topBiasType} (${scientificStr})`;
+  }
+
+  // Sentiment chart utilities (unchanged)
   createSentimentGradientTrace() {
     return {
       type: "heatmap",
@@ -35,7 +60,7 @@ export class ChartUtils {
     return { avgScore, opScore };
   }
 
-  // Bias chart utilities
+  // Bias chart utilities (unchanged)
   calculateBiasData(data) {
     const labelTotals = {};
     let count = 0;
@@ -159,21 +184,31 @@ export class ChartUtils {
     return { highBiasColor: "red", highBiasText: "High Range" };
   }
 
-  // Bar chart utilities
+  // Bar chart utilities - ENHANCED with bias in hovertips
   summarizeCommentsByBin(data) {
     const summary = {};
+
+    // Create a map of comment ID to comment data for quick lookup
+    const commentMap = new Map();
+    for (const row of data) {
+      commentMap.set(row.id, row);
+    }
 
     for (const row of data) {
       const bin = row.oc_bin_id || "Unbinned";
 
       if (!summary[bin]) {
+        // Find the original comment (the one whose ID matches this bin's oc_bin_id)
+        const originalComment = commentMap.get(bin) || row;
+        
         summary[bin] = {
           count: 0,
           totalSentiment: 0,
           oc_author: row.oc_author || row.author || "anonymous",
-          body: row.body,
-          score: row.score || 0,
-          is_op: false
+          body: originalComment.body || row.body, // Use original comment's body
+          score: originalComment.score || row.score || 0, // Use original comment's score
+          is_op: false,
+          bias: originalComment.bias || null // Get bias from the original comment
         };
       }
 
@@ -211,16 +246,20 @@ export class ChartUtils {
     };
   }
 
+  // ENHANCED: Bar chart hover text now includes bias information
   createBarHoverText(row) {
+    const biasText = this.formatBiasForHover(row.bias);
+    
     return `
       <b>author</b>: ${row.oc_author}<br>
       <b>score</b>: ${row.score}<br>
       <b>body</b>: ${row.body.slice(0, 100)}...<br>
-      <b>avg_sentiment</b>: ${(row.totalSentiment / row.count).toFixed(4)}
+      <b>avg_sentiment</b>: ${(row.totalSentiment / row.count).toFixed(4)}<br>
+      ${biasText}
     `;
   }
 
-  // Sunburst chart utilities
+  // Sunburst chart utilities - ENHANCED with bias in hovertips
   processSunburstData(data) {
     this.normalizeParentIds(data);
     return this.filterValidHierarchy(data);
@@ -238,6 +277,26 @@ export class ChartUtils {
   }
 
   createSunburstTrace(data) {
+    // Find the comment with the highest bias (excluding 'none')
+    let maxBiasValue = 0;
+    let maxBiasId = null;
+    
+    data.forEach(row => {
+      if (row.bias && typeof row.bias === 'object') {
+        const nonNoneBias = Object.entries(row.bias)
+          .filter(([key, value]) => key.toLowerCase() !== 'none')
+          .sort(([,a], [,b]) => b - a);
+        
+        if (nonNoneBias.length > 0) {
+          const [, biasValue] = nonNoneBias[0];
+          if (biasValue > maxBiasValue) {
+            maxBiasValue = biasValue;
+            maxBiasId = row.id;
+          }
+        }
+      }
+    });
+
     return {
       type: "sunburst",
       ids: data.map(r => r.id),
@@ -251,22 +310,31 @@ export class ChartUtils {
         colorscale: this.colorScales.sentiment,
         cmin: -1,
         cmax: 1,
-        showscale: false
+        showscale: false,
+        // Add blue outline to the comment with highest bias
+        line: {
+          color: data.map(r => r.id === maxBiasId ? 'blue' : 'white'),
+          width: data.map(r => r.id === maxBiasId ? 1 : 0.5)
+        }
       }
     };
   }
 
+  // ENHANCED: Sunburst hover text now includes bias information  
   createSunburstHoverText(row) {
+    const biasText = this.formatBiasForHover(row.bias);
+    
     return `
       <b>author</b>: ${row.author || "anonymous"}<br>
       <b>score</b>: ${row.score}<br>
       <b>body</b>: ${row.body.slice(0, 100)}...<br>
       <b>sentiment_label</b>: ${row.sentiment_label}<br>
-      <b>sentiment_compound</b>: ${row.sentiment.toFixed(4)}
+      <b>sentiment_compound</b>: ${row.sentiment.toFixed(4)}<br>
+      ${biasText}
     `;
   }
 
-  // Common utilities
+  // Common utilities (unchanged)
   getLegendLayout(yRange = [0, 1]) {
     return {
       xaxis: { visible: false, constrain: 'domain' },
