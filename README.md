@@ -6,15 +6,21 @@ All heavy lifting runs on a **Flask backend (Cloud Run)** — *no setup or API k
 
 ## Screenshots
 
-<img src="frontend/images/key-insights.png" alt="Extension Popup" width="250" style="display: inline-block; margin-right: 20px;">
-<img src="frontend/images/advanced-insights-window.png" alt="Expanded Analysis Window" width="550" style="display: inline-block;">
+<img src="frontend/images/key-insights.png" alt="Extension Popup" width="250">
 
-*Left: Quick sentiment and bias analysis directly in your browser popup | Right: Detailed visualizations with interactive bar charts and sunburst diagrams*
+*Quick sentiment and bias analysis directly in your browser popup*
 
-<img src="frontend/images/smart-resizing-pt2-barchart.png" alt="Interactive Bar Chart" width="550" style="display: inline-block; margin-right: 20px;">
-<img src="frontend/images/smart-resizing-sunburst.png" alt="Interactive Sunburst" width="600" style="display: inline-block;">
+<img src="frontend/images/advanced-insights-window.png" alt="Expanded Analysis Window" width="550">
 
-*Interactive features: Hover over comments to see detailed sentiment scores and bias analysis (left) | Explore comment hierarchy with sunburst visualization (right)*
+*Detailed visualizations with interactive bar charts and sunburst diagrams. Large threads will be difficult to view without zooming.*
+
+<img src="frontend/images/smart-resizing-pt2-barchart.png" alt="Interactive Bar Chart" width="550">
+
+*Crop the bar chart for easier access and hover over comments to see detailed sentiment scores and bias analysis*
+
+<img src="frontend/images/smart-resizing-sunburst.png" alt="Interactive Sunburst" width="600">
+
+*Explore comment hierarchy with interactive sunburst visualization and bias breakdowns*
 
 
 ---
