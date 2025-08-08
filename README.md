@@ -2,7 +2,20 @@
 
 Analyze Reddit threads directly in your browser.  
 The Chrome extension renders **sentiment** and **bias** legends in the popup; an expanded window shows richer charts.  
-All heavy lifting runs on a **Flask backend (Cloud Run)** - *no setup or API keys required for end users*.
+All heavy lifting runs on a **Flask backend (Cloud Run)** — *no setup or API keys required for end users*.
+
+## Screenshots
+
+<img src="frontend/images/key-insights.png" alt="Extension Popup" width="250" style="display: inline-block; margin-right: 20px;">
+<img src="frontend/images/advanced-insights-window.png" alt="Expanded Analysis Window" width="550" style="display: inline-block;">
+
+*Left: Quick sentiment and bias analysis directly in your browser popup | Right: Detailed visualizations with interactive bar charts and sunburst diagrams*
+
+<img src="frontend/images/smart-resizing-pt2-barchart.png" alt="Interactive Bar Chart" width="550" style="display: inline-block; margin-right: 20px;">
+<img src="frontend/images/smart-resizing-sunburst.png" alt="Interactive Sunburst" width="600" style="display: inline-block;">
+
+*Interactive features: Hover over comments to see detailed sentiment scores and bias analysis (left) | Explore comment hierarchy with sunburst visualization (right)*
+
 
 ---
 
@@ -67,7 +80,7 @@ repo/
 
 ## Backend (Cloud Run)
 
-End users don't need to run anything - the extension calls the hosted API.
+End users don't need to run anything — the extension calls the hosted API.
 For local dev:
 
 ```bash
@@ -79,7 +92,7 @@ python main.py   # http://127.0.0.1:8080
 
 ## Environment (dev only)
 
-Server‑side in Cloud Run, already set:
+Server‑side in Cloud Run, you already set:
 
 - `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET`, `REDDIT_USER_AGENT`
 - (Model hosting) GCS credentials in the service account
@@ -104,7 +117,7 @@ Bias only, on provided comments.
 
 ### POST /receive_url
 
-Combined (sentiment then bias) - kept for backward compatibility.
+Combined (sentiment then bias) — kept for backward compatibility.
 
 ### Health/Dev
 
@@ -145,3 +158,7 @@ Combined (sentiment then bias) - kept for backward compatibility.
 ## License
 
 MIT (see LICENSE)
+
+
+## AI Disclaimer
+*AI assistance was used for README formatting and file review. All contents were reviewed and edited by Jackson Montuoro.*
