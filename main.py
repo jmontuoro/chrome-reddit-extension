@@ -22,12 +22,15 @@ _bias_model_path = None
 
 app = Flask(__name__)
 
-# Chrome extension specific CORS configuration
+# Browser specific CORS configuration. Now supports the 4 main browsers.
 # SECURE VERSION:
 CORS(app,
      origins=[
-         "chrome-extension://*", 
-         "https://www.reddit.com",  
+         "chrome-extension://*",     # Chrome, Edge, Brave, etc.
+         "opera-extension://*",      # Opera
+         "moz-extension://*",        # Firefox
+         "safari-web-extension://*", # Safari
+         "https://*.reddit.com",
          "https://reddit.com"
      ],
      methods=["GET", "POST", "OPTIONS"],
