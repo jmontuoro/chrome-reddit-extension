@@ -50,15 +50,16 @@ All heavy lifting runs on a **Flask backend (Cloud Run)** — *no setup or API k
 
 ```
 repo/
-├─ backend/
-│  ├─ main.py                 # Flask app (routes, CORS, model cache)
-│  ├─ reddit_analysis.py      # Reddit load + VADER + bias inference wrappers
-│  ├─ model_loader.py         # GCS download + file verification
-│  ├─ requirements.txt        # Flask, asyncpraw, nltk, transformers, torch, etc.
-│  ├─ Dockerfile              # Cloud Run container
-│  ├─ cloudbuild.yaml         # Optional: GCB pipeline
-│  ├─ runtime.txt             # python-3.11-slim
-│  └─ .dockerignore / .gitignore / LICENSE
+├─ bias_model/             # Exploratory notebooks from development. Not used in production.
+|
+├─ main.py                 # Flask app (routes, CORS, model cache)
+├─ reddit_analysis.py      # Reddit load + VADER + bias inference wrappers
+├─ model_loader.py         # GCS download + file verification
+├─ requirements.txt        # Flask, asyncpraw, nltk, transformers, torch, etc.
+├─ Dockerfile              # Cloud Run container
+├─ cloudbuild.yaml         # Optional: GCB pipeline
+├─ runtime.txt             # python-3.11-slim
+└─ .dockerignore / .gitignore / LICENSE
 │
 └─ frontend/
    ├─ popup.html              # UI layout (legends + advanced visuals section)
