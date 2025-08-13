@@ -207,3 +207,26 @@ marimo/_lsp/
 __marimo__/
 model_t2835ru3/*.safetensors
 .DS_Store
+# === Large model files ===
+*.pt
+*.pth
+*.bin
+*.safetensors
+*.ckpt
+*.onnx
+*.tar
+*.zip
+
+# === Trainer artifacts ===
+optimizer.pt
+scheduler.pt
+rng_state.pth
+training_args.bin
+trainer_state.json
+
+# === Ignore all checkpoint directories under finetuning ===
+bias_model/finetuning/**/checkpoint-*/
+
+# === VSCode settings ===
+.vscode/
+
