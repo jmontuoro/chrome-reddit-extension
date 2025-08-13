@@ -50,7 +50,7 @@ All heavy lifting runs on a **Flask backend (Cloud Run)** — *no setup or API k
 
 ```
 repo/
-├─ bias_model/             # Exploratory notebooks from development. Not used in production.
+├─ bias_model/             # Model development notebooks. Not required in production.
 |
 ├─ main.py                 # Flask app (routes, CORS, model cache)
 ├─ reddit_analysis.py      # Reddit load + VADER + bias inference wrappers
@@ -73,6 +73,13 @@ repo/
    │  └─ chart-utils.js
    └─ content.js              # page URL capture if needed
 ```
+
+## Bias Model — development (not used in production)
+
+The fine-tuned bias model used by this extension runs in the backend service.  
+This folder documents how we selected and trained the model so the process can be reproduced.
+
+See `bias_model/Model_selection_n_finetuning.txt` for notebook pointers and details about the training infrastructure.
 
 ## Installation (Extension)
 
@@ -130,13 +137,13 @@ Combined (sentiment then bias) — kept for backward compatibility.
 
 - `GET /` → health check
 - `GET /test-model-download` → lists model files after GCS sync
-- `GET /test-bias?text=...` → runs a single HateBERT pass and returns logits/probs
+- `GET /test-bias?text=...` → runs a single bias-model pass and returns logits/probabilities (fine-tuned HateBERT)
 
 ## Modeling Details
 
 **Sentiment**: NLTK VADER (sia.polarity_scores()['compound']), thresholds ±0.05 ⇒ positive | neutral | negative.
 
-**Bias**: HateBERT‑based classifier via Hugging Face transformers + torch.
+**Bias**: Fine-tuned HateBERT-based classifier via Hugging Face transformers + torch.
 
 - Loaded once per instance (cached) via model_loader.download_model_from_gcs(...)
 - Required files (checked):
