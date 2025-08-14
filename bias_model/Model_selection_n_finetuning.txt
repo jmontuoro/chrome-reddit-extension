@@ -1,0 +1,71 @@
+This document contains comments of what each directory and files are inside the bias_model tree.
+
+Here is the process to reproduce the process we followed to define, test, and create the model used for the bias component of our chrome extension:
+
+0- The requirements1.txt are the dependencies to run the notebooks in the bias_model directory, different from the ones needed to reproduce the chrome extension.
+
+1- start with the file bias_model_first_test_and_dataset_reddit.ipynb. to download and do a first test with the hatebert and Facebook Roberta models. The dataset is already downloaded in the social_bias.csv you will find in the root of bias_model folder!!
+
+2- run the bayesian search sweeps and the evaluation of those with the notebooks inside the model_sweeps directory. We used 30% of the data for these but still can be heavy so the csvs of the results of the runs and of the testing with the full test dataset are included if you would like to run the the evaluation_seep_models notebook. 
+
+3- The finetuning folder includes the finetuning notebooks where we tried different strategies to finetune the Hatebert model. We trained the model in a NVIDIA RTX A6000, using lambda.ai services, because Google Colab runtimes were restricted. Each notebook in this directory has a note explaining what we did, summarizing this hb_modified_CPU_finetune_from_checkpoint_freshSchedule.ipynb, produced the best results.
+
+
+
+
+.
+└── bias_model
+    ├── bias_model_first_test_and_dataset_reddit.ipynb #downloads Dataset from HF and do a base comparison hatebert vs Facebook Roberta models.
+    ├── finetuning
+    │   ├── eval_export # includes csvs reports from the best fine-tuned model (notebook hb_modified_CPU_finetune_from_checkpoint_freshSchedule.ipynb) for Viz in viz_from_checkpoint_freshSchedule .ipynb
+    │   │   ├── test_classification_report.csv
+    │   │   ├── test_confusion_matrix_counts.csv
+    │   │   └── test_raw_predictions_with_probs.csv
+    │   ├── finetuning_eval_func.py #helper functions module
+    │   ├── hb_class_rebalanced_finetune_from_checkpoint_freshSchedule.ipynb # Fine-tuning run with inv.freq. and sampling to balance classes
+    │   ├── hb_modified_CPU_finetune_from_checkpoint_freshSchedule.ipynb #Fine-tuning run with checkpoint weights only, and fresh schedule -this gave the best fine tunned results
+    │   ├── hb_modified_CPU_finetune_from_checkpoint.ipynb #Fine tuning run picking up exactly where the best checkpoint left.
+    │   └── viz_from_checkpoint_freshSchedule .ipynb
+    ├── model_sweeps
+    │   ├── evaluation_sweep_models.ipynb
+    │   ├── hatebert_logs #logs_focal #logs created in the CE sweeps
+
+    │   │   ├── metrics_1cjkn9sp.csv
+    │   │   ├── metrics_2wuafe8z.csv
+    │   │   ├── metrics_51acg13c.csv
+    │   │   ├── metrics_7kxfs0t9.csv
+    │   │   ├── metrics_j4hhkmkl.csv
+    │   │   ├── metrics_p8ueffpb.csv
+    │   │   ├── metrics_qb8zs1s4.csv
+    │   │   ├── metrics_t2835ru3.csv
+    │   │   ├── metrics_ym4rv6rt.csv
+    │   │   ├── metrics_zbtdpew1.csv
+    │   │   └── results_t2835ru3.csv
+    │   ├── logs_focal #logs created in the Focal Loss sweeps
+    │   │   ├── focal_metrics_2cfhjojw.csv
+    │   │   ├── focal_metrics_83v4udtp.csv
+    │   │   ├── focal_metrics_fd415zp6.csv
+    │   │   ├── focal_metrics_k84xbxys.csv
+    │   │   ├── focal_metrics_l6g6yt2p.csv
+    │   │   ├── focal_metrics_midmdhlr.csv
+    │   │   ├── focal_metrics_q9avuxel.csv
+    │   │   ├── focal_metrics_wpwb9oxw.csv
+    │   │   ├── focal_metrics_zapg8lmm.csv
+    │   │   └── focal_metrics_zzzkhebt.csv
+    │   ├── sweep1_hatebert.ipynb #how we run the second sweep with Cross Entropy loss
+│   ├── model_t2835ru3 # Best model cross entropy
+    │   ├── sweep2_hatebert (1).ipynb #how we run the second sweep with Focal Loss
+│   ├── model_t2835ru3 # Best model cross entropy
+    │   └── testdata_results-logs #results of the evaluation of the best cross entropy loss sweep models with the test dataset
+    │       ├── results_focal_wpwb9oxw.csv
+    │       └── results_t2835ru3.csv
+    ├── model_t2835ru3
+    │   ├── config.json
+    │   ├── special_tokens_map.json
+    │   ├── tokenizer_config.json
+    │   ├── tokenizer.json
+    │   └── vocab.txt
+    ├── requirements1.txt #requirements to run all the notebooks in the bias_model folder, different form the chrome MVP
+    └── social_bias.csv #Social bias datased
+
+9 directories, 42 files
